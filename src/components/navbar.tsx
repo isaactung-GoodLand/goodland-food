@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "首頁" },
+  { href: "/products", label: "商品" },
   { href: "/machine", label: "快速煮茶機" },
   { href: "/three-thirty", label: "三點三食材" },
   { href: "/about", label: "關於甘田" },
