@@ -1,8 +1,31 @@
 import Link from "next/link";
 import { ArrowUpRight, Sparkles, Leaf, Coffee, Newspaper, Quote } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { getProductRepo } from "@/lib/db/products";
+import type { Product } from "@/lib/adapters/types";
 
-export default function Home() {
+export const revalidate = 60;
+
+const PLATFORM_LABEL: Record<Product["platform"], string> = {
+  shopee: "蝦皮",
+  momo: "momo",
+  pchome: "PChome",
+  yahoo: "Yahoo",
+  native: "甘田直營",
+};
+
+const PLATFORM_ACCENT: Record<Product["platform"], string> = {
+  shopee: "text-orange-600 bg-orange-50 border-orange-200",
+  momo: "text-pink-600 bg-pink-50 border-pink-200",
+  pchome: "text-blue-600 bg-blue-50 border-blue-200",
+  yahoo: "text-purple-600 bg-purple-50 border-purple-200",
+  native: "text-forest-700 bg-forest-50 border-forest-300",
+};
+
+export default async function Home() {
+  const repo = getProductRepo();
+  const allProducts = await repo.listAll();
+  const featuredProducts = allProducts.slice(0, 3);
   return (
     <>
       {/* ───────────────────────── HERO ───────────────────────── */}
@@ -210,7 +233,81 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────────────── PULL QUOTE ───────────────── */}
+      {/* ───────────────── FEATURED PRODUCTS ───────────────── */}
+      {featuredProducts.length > 0 && (
+        <section className="py-32 grain">
+          <div className="container-x">
+            <Reveal>
+              <div className="flex items-end justify-between mb-12 gap-8 flex-wrap">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.25em] text-forest-700 font-medium flex items-center gap-2">
+                    <Coffee size={14} /> Featured Products
+                  </div>
+                  <h2 className="mt-4 font-serif text-4xl md:text-5xl font-light leading-tight">
+                    拿起杯,
+                    <span className="italic text-forest-700">馬上就有。</span>
+                  </h2>
+                </div>
+                <Link
+                  href="/products"
+                  className="text-ink-700 hover:text-forest-700 text-sm font-medium border-b border-ink-900/20 pb-0.5"
+                >
+                  看全部商品 →
+                </Link>
+              </div>
+            </Reveal>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {featuredProducts.map((p, i) => (
+                <Reveal key={p.id} delay={i * 0.05}>
+                  <Link
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block rounded-2xl border border-ink-900/10 bg-cream-50 hover:border-forest-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                  >
+                    <div className="relative aspect-[4/3] bg-cream-100 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      {p.inStock === false && (
+                        <div className="absolute top-3 right-3 px-3 py-1 bg-cream-50/90 backdrop-blur rounded-full text-xs text-ink-700 border border-ink-900/10">
+                          補貨中
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-5">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-medium border ${PLATFORM_ACCENT[p.platform]}`}
+                      >
+                        {PLATFORM_LABEL[p.platform]}
+                      </span>
+                      <h3 className="mt-3 font-serif text-xl leading-snug text-ink-900">
+                        {p.name}
+                      </h3>
+                      <div className="mt-3 flex items-center justify-between">
+                        <p className="font-serif text-2xl text-ink-900">
+                          NT$ {p.price.toLocaleString()}
+                        </p>
+                        <ArrowUpRight
+                          size={18}
+                          className="text-ink-400 group-hover:text-forest-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ───────────────── PULL QUOTE ───────────────── */}
       <section className="py-20 bg-forest-900 text-cream-50 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 grain" />
