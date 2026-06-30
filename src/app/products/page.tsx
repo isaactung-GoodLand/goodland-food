@@ -19,6 +19,10 @@ const PLATFORM_LABEL: Record<Product["platform"], string> = {
   momo: "momo",
   pchome: "PChome",
   yahoo: "Yahoo",
+  coupang: "酷澎",
+  line: "LINE",
+  iopenmall: "iOpen",
+  maiship: "賣貨便",
   native: "甘田直營",
 };
 
@@ -27,6 +31,10 @@ const PLATFORM_ACCENT: Record<Product["platform"], string> = {
   momo: "text-pink-600",
   pchome: "text-blue-600",
   yahoo: "text-purple-600",
+  coupang: "text-red-600",
+  line: "text-green-600",
+  iopenmall: "text-amber-600",
+  maiship: "text-sky-600",
   native: "text-forest-700",
 };
 

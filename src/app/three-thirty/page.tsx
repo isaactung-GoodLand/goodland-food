@@ -74,8 +74,7 @@ export default function ThreeThirtyPage() {
                       ))}
                     </ul>
                     <Link
-                      href="https://gantianfoodtechnology.easy.co/"
-                      target="_blank"
+                      href="/products"
                       className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-900"
                     >
                       線上購買 <ArrowUpRight size={14} />
@@ -98,8 +97,7 @@ export default function ThreeThirtyPage() {
           </Reveal>
           <Reveal delay={0.15}>
             <Link
-              href="https://gantianfoodtechnology.easy.co/"
-              target="_blank"
+              href="/products"
               className="mt-10 inline-flex items-center gap-2 px-7 py-3.5 bg-ink-900 text-cream-50 rounded-full font-medium hover:bg-forest-700 transition-colors"
             >
               前往線上商店 →

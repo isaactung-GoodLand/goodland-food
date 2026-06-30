@@ -8,16 +8,19 @@ export type Platform =
   | 'momo'
   | 'pchome'
   | 'yahoo'
+  | 'coupang'
+  | 'line'
+  | 'iopenmall'
+  | 'maiship'
   | 'native'
   | 'instagram'
   | 'facebook'
   | 'tiktok'
   | 'threads'
-  | 'line'
 
 export type Product = {
   id: string
-  platform: Extract<Platform, 'shopee' | 'momo' | 'pchome' | 'yahoo' | 'native'>
+  platform: Extract<Platform, 'shopee' | 'momo' | 'pchome' | 'yahoo' | 'coupang' | 'line' | 'iopenmall' | 'maiship' | 'native'>
   externalId: string
   name: string
   price: number
@@ -60,7 +63,7 @@ export interface PlatformAdapter {
 }
 
 // ─── 平台能力查詢 ───
-const PRODUCT_PLATFORMS: ReadonlySet<string> = new Set(['shopee', 'momo', 'pchome', 'yahoo', 'native'])
+const PRODUCT_PLATFORMS: ReadonlySet<string> = new Set(['shopee', 'momo', 'pchome', 'yahoo', 'coupang', 'line', 'iopenmall', 'maiship', 'native'])
 const POST_PLATFORMS: ReadonlySet<string> = new Set(['instagram', 'facebook', 'tiktok', 'threads', 'line', 'native'])
 
 export function platformSupportsProducts(platform: string): boolean {
@@ -77,12 +80,15 @@ const ID_PREFIX: Record<string, string> = {
   momo: 'momo',
   pchome: 'pchome',
   yahoo: 'yahoo',
+  coupang: 'coupang',
+  line: 'line',
+  iopenmall: 'iopenmall',
+  maiship: 'maiship',
   native: 'native',
   instagram: 'ig',
   facebook: 'fb',
   tiktok: 'tiktok',
   threads: 'threads',
-  line: 'line',
 }
 
 // ─── Normalizers(給 adapters 用,確保輸出一致)───

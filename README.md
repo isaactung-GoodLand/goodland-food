@@ -110,6 +110,6 @@ server {
 
 ## 🔗 相關連結
 
-- 線上商店: https://gantianfoodtechnology.easy.co
+- 線上商店: https://goodland-food.vercel.app/products
 - 媒體: HKET / 自由時報 / TVBS / Focus Taiwan
 - 公司: 甘田食品科技股份有限公司 / Goodland Food Technology Co., Ltd.
