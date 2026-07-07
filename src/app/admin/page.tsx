@@ -36,6 +36,7 @@ export default function AdminCRM() {
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
+  const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -61,6 +62,7 @@ export default function AdminCRM() {
     if (search) params.set('q', search);
     if (cityFilter) params.set('city', cityFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
+    if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();
@@ -207,6 +209,12 @@ export default function AdminCRM() {
               onChange={e => { setUncontactedOnly(e.target.checked); setPage(1); }}
               className="w-3 h-3 rounded accent-red-500" />
             未聯絡
+          </label>
+          <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={hasMilkTeaOnly}
+              onChange={e => { setHasMilkTeaOnly(e.target.checked); setPage(1); }}
+              className="w-3 h-3 rounded accent-green-500" />
+            有奶茶
           </label>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>

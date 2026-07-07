@@ -26,6 +26,9 @@ export async function GET(request: Request) {
   if (uncontacted) {
     where += ` AND NOT EXISTS (SELECT 1 FROM contact_logs cl WHERE cl.restaurant_id = restaurants.id)`;
   }
+  if (searchParams.get('has_milk_tea') === 'true') {
+    where += ` AND has_hongkong_milk_tea = true`;
+  }
 
   const countRes = await pool.query(`SELECT COUNT(*) FROM restaurants ${where}`, params);
   const total = parseInt(countRes.rows[0].count);
