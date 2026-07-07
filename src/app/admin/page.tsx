@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 
 interface Restaurant {
   id: number;
@@ -95,6 +96,16 @@ export default function AdminCRM() {
     setSaving(false);
   };
 
+  const handleDelete = async () => {
+    if (!selected) return;
+    if (!confirm(`確定要刪除「${selected.name}」嗎？此操作不可逆。`)) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setSelected(null);
+      fetchRestaurants();
+    }
+  };
+
   const addContactLog = async () => {
     if (!selected) return;
     setAddingNote(true);
@@ -158,7 +169,10 @@ export default function AdminCRM() {
       {/* LEFT PANEL - 220px fixed */}
       <div className="w-[220px] border-r border-gray-200 flex flex-col bg-white shrink-0">
         <div className="p-3 border-b border-gray-200 space-y-2">
-          <h1 className="text-sm font-bold text-gray-800">🍜 港式餐廳 CRM</h1>
+          <h1 className="text-sm font-bold text-gray-800 flex items-center justify-between">
+          <span>🍜 CRM</span>
+          <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
+        </h1>
           <input
             type="text" placeholder="🔍 搜尋..."
             value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -240,6 +254,10 @@ export default function AdminCRM() {
                         <button onClick={() => { setEditing(false); setEditForm(selected); }}
                           className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300">
                           ✕
+                        </button>
+                        <button onClick={handleDelete}
+                          className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 shrink-0">
+                          🗑
                         </button>
                       </div>
                     )}
