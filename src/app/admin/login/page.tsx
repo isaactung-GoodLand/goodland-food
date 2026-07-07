@@ -38,9 +38,9 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">帳號</label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -68,9 +68,7 @@ export default function LoginPage() {
             {loading ? '登入中...' : '登入'}
           </button>
         </form>
-        <p className="text-xs text-gray-400 text-center mt-6">
-          預設帳號：goodland / isaactung0902
-        </p>
+
       </div>
     </div>
   );
