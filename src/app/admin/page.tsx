@@ -42,14 +42,9 @@ export default function AdminCRM() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
   const [saving, setSaving] = useState(false);
-  const [activeIframe, setActiveIframe] = useState<string | null>(null);
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [iframeError, setIframeError] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
   const [rightTopHeight, setRightTopHeight] = useState(360);
-  const iframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResizing = useRef(false);
 
   const fetchRestaurants = useCallback(async () => {
@@ -76,13 +71,10 @@ export default function AdminCRM() {
     setSelected(r);
     setEditForm(r);
     setContactLogs(r.contact_logs || []);
-    setActiveIframe(null);
-    setIframeUrl(null);
-    setShowHistory(false);
+    setEditing(false);
     const res = await fetch(`/admin/api/restaurants/${r.id}`);
     const data = await res.json();
     setContactLogs(data.contact_logs || []);
-    setEditing(false);
   };
 
   const saveEdit = async () => {
@@ -119,35 +111,24 @@ export default function AdminCRM() {
     setAddingNote(false);
   };
 
-  // Sites that block iframes → route through server-side proxy
-  const BLOCKED_HOSTS = ['facebook.com', 'www.facebook.com', 'instagram.com', 'www.instagram.com', 'line.me', 'www.line.me', 'liff.line.me'];
-  const needsProxy = (url: string) => {
+  const openWindow = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Convert Google Maps URL to embed URL
+  const getMapsEmbedUrl = (gmapsUrl: string): string => {
+    if (!gmapsUrl) return '';
     try {
-      const u = new URL(url);
-      return BLOCKED_HOSTS.includes(u.host) || u.host.endsWith('.facebook.com') || u.host.endsWith('.instagram.com') || u.host.endsWith('.line.me');
-    } catch { return false; }
-  };
-
-  const openUrl = (url: string) => {
-    if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
-    const proxiedUrl = needsProxy(url)
-      ? `/api/proxy?url=${encodeURIComponent(url)}`
-      : url;
-    setIframeUrl(proxiedUrl);
-    setActiveIframe(url);
-    setIframeError(false);
-    iframeTimerRef.current = setTimeout(() => {
-      setIframeError(true);
-    }, 5000);
-  };
-
-  const contactUrl = (r: Restaurant, type: string): string | null => {
-    switch (type) {
-      case 'phone': return r.phone ? `tel:${r.phone.replace(/\s|-|\./g, '')}` : null;
-      case 'facebook': return r.facebook ? (r.facebook.startsWith('http') ? r.facebook : `https://facebook.com/${r.facebook}`) : null;
-      case 'instagram': return r.instagram ? (r.instagram.startsWith('http') ? r.instagram : `https://instagram.com/${r.instagram.replace('@','')}`) : null;
-      case 'line': return r.line ? (r.line.startsWith('http') ? r.line : `https://line.me/ti/p/~${r.line}`) : null;
-      default: return null;
+      // If it's already an embed URL, return as-is
+      if (gmapsUrl.includes('output=embed')) return gmapsUrl;
+      // Extract place ID or coordinates from Google Maps URL
+      const url = new URL(gmapsUrl);
+      const query = encodeURIComponent(selected?.address || selected?.name || '');
+      // Use embed API format
+      if (query) return `https://www.google.com/maps?q=${query}&output=embed&t=&z=16&hl=zh-TW`;
+      return gmapsUrl;
+    } catch {
+      return gmapsUrl;
     }
   };
 
@@ -201,11 +182,11 @@ export default function AdminCRM() {
               return (
                 <div key={r.id}
                   onClick={() => selectRestaurant(r)}
-                  className={`px-3 py-2 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition relative ${selected?.id === r.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                  className={`px-3 py-2 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition relative group ${selected?.id === r.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
                 >
                   {/* Indicators */}
                   <span className="absolute top-2 right-2 flex gap-0.5">
-                    {lastLog && <span title={`最後記錄: ${lastLog.notes || typeLabel[lastLog.contact_type] || ''}`} className="text-red-500 font-bold text-xs">*</span>}
+                    {lastLog && <span title={`有紀錄: ${lastLog.notes || typeLabel[lastLog.contact_type] || ''}`} className="text-red-500 font-bold text-xs">*</span>}
                     {r.has_hongkong_milk_tea && <span className="text-green-500 font-bold text-xs">*</span>}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10">{r.name}</div>
@@ -238,6 +219,7 @@ export default function AdminCRM() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* TOP SECTION: Info + Log (resizable) */}
           <div style={{ height: rightTopHeight }} className="flex flex-col shrink-0 border-b border-gray-300">
+
             {/* Restaurant info + action buttons */}
             <div className="p-4 border-b border-gray-200 bg-white">
               <div className="flex items-start justify-between gap-4">
@@ -273,34 +255,34 @@ export default function AdminCRM() {
                     <p className="text-xs text-gray-500 mt-1">{selected.address}</p>
                   )}
                 </div>
-                {/* Contact action buttons - open in iframe */}
+                {/* Contact action buttons - window.open */}
                 <div className="flex gap-1.5 flex-wrap shrink-0">
                   {selected.phone && (
-                    <button onClick={() => openUrl(`tel:${selected.phone!.replace(/\s|-|\./g, '')}`)}
+                    <button onClick={() => openWindow(`tel:${selected.phone.replace(/\s|-|\./g, '')}`)}
                       className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700">
                       📞 {selected.phone}
                     </button>
                   )}
                   {selected.facebook && (
-                    <button onClick={() => openUrl(contactUrl(selected, 'facebook')!)}
+                    <button onClick={() => openWindow(`https://facebook.com/${selected.facebook}`)}
                       className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700">
                       💬 FB
                     </button>
                   )}
                   {selected.instagram && (
-                    <button onClick={() => openUrl(contactUrl(selected, 'instagram')!)}
+                    <button onClick={() => openWindow(`https://instagram.com/${selected.instagram.replace('@','')}`)}
                       className="px-3 py-1.5 bg-pink-600 text-white text-xs rounded-lg hover:bg-pink-700">
                       📸 IG
                     </button>
                   )}
                   {selected.line && (
-                    <button onClick={() => openUrl(contactUrl(selected, 'line')!)}
+                    <button onClick={() => openWindow(`https://line.me/ti/p/~${selected.line}`)}
                       className="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700">
                       💚 LINE
                     </button>
                   )}
                   {selected.gmaps_url && (
-                    <button onClick={() => openUrl(selected.gmaps_url)}
+                    <button onClick={() => openWindow(selected.gmaps_url)}
                       className="px-3 py-1.5 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700">
                       📍 地圖
                     </button>
@@ -343,11 +325,11 @@ export default function AdminCRM() {
                       contactLogs.map((log, idx) => (
                         <div key={log.id}
                           onMouseEnter={e => {
-                            const rect = (e.target as HTMLElement).getBoundingClientRect();
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                             setHoveredLog({ log, x: rect.left, y: rect.bottom + 4 });
                           }}
                           onMouseLeave={() => setHoveredLog(null)}
-                          className={`shrink-0 w-[120px] p-2 rounded-lg border cursor-default text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
+                          className={`relative shrink-0 w-[120px] p-2 rounded-lg border cursor-default text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
                         >
                           <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${typeColor[log.contact_type] || 'bg-gray-100'}`}>
                             {typeLabel[log.contact_type] || log.contact_type}
@@ -356,10 +338,6 @@ export default function AdminCRM() {
                             {new Date(log.contact_date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
                           </div>
                           {log.notes && <div className="text-[10px] text-gray-600 mt-1 truncate">{log.notes}</div>}
-                          {/* History icon for older logs */}
-                          {idx > 0 && (
-                            <div className="absolute top-1 right-1 text-gray-300">⏱</div>
-                          )}
                         </div>
                       ))
                     )}
@@ -371,43 +349,27 @@ export default function AdminCRM() {
             {/* Resizer handle */}
             <div ref={resizerRef}
               onMouseDown={() => { isResizing.current = true; document.body.style.cursor = 'row-resize'; document.body.style.userSelect = 'none'; }}
-              className="h-2 bg-gray-100 border-t border-gray-200 cursor-row-resize hover:bg-blue-100 transition text-center"
-            >
-              <div className="text-gray-300 text-xs">⋮</div>
+              className="h-2 bg-gray-100 border-t border-gray-200 cursor-row-resize hover:bg-blue-100 transition text-center flex items-center justify-center">
+              <div className="text-gray-400 text-xs">⋮</div>
             </div>
           </div>
 
-          {/* BOTTOM SECTION: iframe for all external links */}
+          {/* BOTTOM SECTION: Google Maps iframe */}
           <div className="flex-1 overflow-hidden bg-gray-100">
-            {iframeUrl ? (
+            {selected.gmaps_url ? (
               <div className="h-full relative">
-                <div className="absolute top-0 left-0 right-0 bg-gray-800 text-white text-xs px-3 py-1.5 flex items-center justify-between z-10">
-                  <span className="truncate max-w-xs">{iframeUrl}</span>
-                  <button onClick={() => { setIframeUrl(null); setActiveIframe(null); setIframeError(false); }}
-                    className="ml-2 text-gray-400 hover:text-white shrink-0">✕ 關閉</button>
-                </div>
-                {!iframeError ? (
-                  <iframe
-                    src={iframeUrl}
-                    className="w-full h-full border-0 pt-8"
-                    title="content"
-                    onLoad={() => { if (iframeTimerRef.current) { clearTimeout(iframeTimerRef.current); setIframeError(false); } }}
-                  />
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500 text-sm pt-8">
-                    <div className="text-4xl mb-3">🚫</div>
-                    <div className="mb-2">此網站不允許嵌入顯示</div>
-                    <div className="text-xs text-gray-400 mb-4">{iframeUrl}</div>
-                    <a href={iframeUrl} target="_blank" rel="noreferrer"
-                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                      ↗ 在新視窗開啟
-                    </a>
-                  </div>
-                )}
+                <iframe
+                  src={getMapsEmbedUrl(selected.gmaps_url)}
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title={`${selected.name} - 地圖`}
+                />
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-                點選上方按鈕在此顯示
+                此店家無地圖資訊
               </div>
             )}
           </div>
@@ -421,7 +383,7 @@ export default function AdminCRM() {
         </div>
       )}
 
-      {/* Hover tooltip for last log on left list items */}
+      {/* Hover tooltip for contact log history */}
       {hoveredLog && (
         <div
           className="fixed z-[9999] bg-gray-800 text-white text-xs rounded-lg px-3 py-2.5 max-w-xs shadow-xl pointer-events-none"
