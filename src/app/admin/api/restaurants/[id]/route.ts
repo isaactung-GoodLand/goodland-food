@@ -1,21 +1,22 @@
 import { pool } from '@/lib/db';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-  if (!id) return Response.json({ error: 'Missing id' }, { status: 400 });
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json();
+  const { name, phone, facebook, instagram, line, address } = body;
 
   const res = await pool.query(
-    `SELECT r.*, 
-            COALESCE(json_agg(
-              json_build_object('id', cl.id, 'contact_date', cl.contact_date, 'contact_type', cl.contact_type, 'notes', cl.notes, 'created_at', cl.created_at)
-              ORDER BY cl.contact_date DESC
-            ) FILTER (WHERE cl.id IS NOT NULL), '[]') as contact_logs
-     FROM restaurants r
-     LEFT JOIN contact_logs cl ON cl.restaurant_id = r.id
-     WHERE r.id = $1
-     GROUP BY r.id`,
-    [id]
+    `UPDATE restaurants SET
+       name = COALESCE($1, name),
+       phone = COALESCE($2, phone),
+       facebook = COALESCE($3, facebook),
+       instagram = COALESCE($4, instagram),
+       line = COALESCE($5, line),
+       address = COALESCE($6, address),
+       updated_at = NOW()
+     WHERE id = $7
+     RETURNING *`,
+    [name, phone, facebook, instagram, line, address, id]
   );
 
   if (res.rows.length === 0) return Response.json({ error: 'Not found' }, { status: 404 });

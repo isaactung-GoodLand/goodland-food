@@ -39,6 +39,9 @@ export default function AdminCRM() {
   const [newType, setNewType] = useState('phone');
   const [addingNote, setAddingNote] = useState(false);
   const [contactLogs, setContactLogs] = useState<ContactLog[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
+  const [saving, setSaving] = useState(false);
 
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
@@ -62,10 +65,30 @@ export default function AdminCRM() {
 
   const selectRestaurant = async (r: Restaurant) => {
     setSelected(r);
+    setEditForm(r);
     setContactLogs(r.contact_logs || []);
     const res = await fetch(`/admin/api/restaurants/${r.id}`);
     const data = await res.json();
     setContactLogs(data.contact_logs || []);
+    setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    if (!selected) return;
+    setSaving(true);
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSelected(updated);
+      setEditForm(updated);
+      setEditing(false);
+      fetchRestaurants();
+    }
+    setSaving(false);
   };
 
   const addContactLog = async () => {
@@ -96,6 +119,19 @@ export default function AdminCRM() {
 
   const typeLabel: Record<string, string> = { phone: '📞 電話', facebook: '💬 Facebook', instagram: '📸 Instagram', line: '💚 LINE', walkin: '🚶 親訪', other: '📝 其他' };
   const typeColor: Record<string, string> = { phone: 'bg-blue-100 text-blue-800', facebook: 'bg-indigo-100 text-indigo-800', instagram: 'bg-pink-100 text-pink-800', line: 'bg-green-100 text-green-800', walkin: 'bg-amber-100 text-amber-800', other: 'bg-gray-100 text-gray-800' };
+
+  const EditRow = ({ label, field, placeholder }: { label: string; field: keyof Restaurant; placeholder?: string }) => (
+    <div className="flex items-center gap-2">
+      <label className="text-xs text-gray-500 w-16 shrink-0">{label}</label>
+      <input
+        type="text"
+        value={(editForm[field] as string) || ''}
+        onChange={e => setEditForm(prev => ({ ...prev, [field]: e.target.value }))}
+        placeholder={placeholder}
+        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ height: '100vh' }}>
@@ -137,7 +173,6 @@ export default function AdminCRM() {
             ))
           )}
         </div>
-        {/* Pagination */}
         <div className="p-3 border-t border-gray-200 flex items-center justify-between bg-white">
           <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page <= 1}
             className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">上一頁</button>
@@ -147,54 +182,88 @@ export default function AdminCRM() {
         </div>
       </div>
 
-      {/* RIGHT PANEL - Detail + Contact */}
+      {/* RIGHT PANEL */}
       {selected ? (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-5 border-b border-gray-200 bg-white">
-            <h2 className="text-xl font-bold text-gray-800">{selected.name}</h2>
-            <p className="text-sm text-gray-500 mt-1">{selected.address}</p>
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {selected.phone && (
-                <a href={contactUrl(selected, 'phone')!} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-                  📞 {selected.phone}
-                </a>
-              )}
-              {selected.facebook && (
-                <a href={contactUrl(selected, 'facebook')!} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition">
-                  💬 Facebook
-                </a>
-              )}
-              {selected.instagram && (
-                <a href={contactUrl(selected, 'instagram')!} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition">
-                  📸 Instagram
-                </a>
-              )}
-              {selected.line && (
-                <a href={contactUrl(selected, 'line')!} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition">
-                  💚 LINE
-                </a>
-              )}
-              {selected.gmaps_url && (
-                <a href={selected.gmaps_url} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition">
-                  📍 地圖
-                </a>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-800">{selected.name}</h2>
+              {!editing ? (
+                <button onClick={() => setEditing(true)}
+                  className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+                  ✏️ 編輯
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={saveEdit} disabled={saving}
+                    className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition">
+                    {saving ? '儲存中...' : '💾 儲存'}
+                  </button>
+                  <button onClick={() => { setEditing(false); setEditForm(selected); }}
+                    className="px-4 py-1.5 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition">
+                    取消
+                  </button>
+                </div>
               )}
             </div>
+
+            {/* Edit Form */}
+            {editing ? (
+              <div className="mt-4 space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-xs font-semibold text-gray-500 mb-2">編輯店家資料</div>
+                <EditRow label="電話" field="phone" placeholder="電話號碼" />
+                <EditRow label="Facebook" field="facebook" placeholder="Facebook 網址或帳號" />
+                <EditRow label="Instagram" field="instagram" placeholder="Instagram 帳號" />
+                <EditRow label="LINE" field="line" placeholder="LINE ID" />
+                <EditRow label="地址" field="address" placeholder="完整地址" />
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">{selected.address}</p>
+            )}
+
+            {/* Contact Buttons */}
+            {!editing && (
+              <div className="flex gap-2 mt-3 flex-wrap">
+                {selected.phone && (
+                  <a href={contactUrl(selected, 'phone')!} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+                    📞 {selected.phone}
+                  </a>
+                )}
+                {selected.facebook && (
+                  <a href={contactUrl(selected, 'facebook')!} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition">
+                    💬 Facebook
+                  </a>
+                )}
+                {selected.instagram && (
+                  <a href={contactUrl(selected, 'instagram')!} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-pink-600 text-white text-sm rounded-lg hover:bg-pink-700 transition">
+                    📸 Instagram
+                  </a>
+                )}
+                {selected.line && (
+                  <a href={contactUrl(selected, 'line')!} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition">
+                    💚 LINE
+                  </a>
+                )}
+                {selected.gmaps_url && (
+                  <a href={selected.gmaps_url} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition">
+                    📍 地圖
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Contact Log + Iframe area */}
+          {/* Contact Log + Iframe */}
           <div className="flex-1 overflow-hidden flex">
-            {/* Contact Logs */}
             <div className="w-[340px] border-r border-gray-200 flex flex-col">
               <div className="p-4 border-b border-gray-200 bg-gray-50">
                 <h3 className="font-semibold text-gray-700 text-sm mb-3">📋 聯絡紀錄</h3>
-                {/* Add new log */}
                 <div className="space-y-2">
                   <select value={newType} onChange={e => setNewType(e.target.value)}
                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
@@ -238,17 +307,17 @@ export default function AdminCRM() {
 
             {/* Contact WebView */}
             <div className="flex-1 flex flex-col bg-gray-100">
-              <div className="p-2 border-b border-gray-200 bg-white text-xs text-gray-500">
-                聯絡視窗 — 點上方按鈕開啟
+              <div className="p-2 border-b border-gray-200 bg-white text-xs text-gray-500 flex items-center justify-between px-4">
+                <span>聯絡視窗</span>
+                {selected.phone && (
+                  <a href={contactUrl(selected, 'phone')!} target="_blank" rel="noreferrer"
+                    className="text-blue-600 hover:underline">直接撥號 ↗</a>
+                )}
               </div>
               <div className="flex-1 p-3">
                 {selected.phone ? (
                   <div className="h-full bg-white rounded-lg overflow-hidden">
-                    <iframe
-                      src={contactUrl(selected, 'phone')!}
-                      className="w-full h-full border-0"
-                      title="Phone"
-                    />
+                    <iframe src={contactUrl(selected, 'phone')!} className="w-full h-full border-0" title="Phone" />
                   </div>
                 ) : (
                   <div className="h-full flex items-center justify-center text-gray-400 text-sm">
