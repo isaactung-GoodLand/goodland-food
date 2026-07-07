@@ -75,7 +75,7 @@ export default function AdminCRM() {
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, page]);
+  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
