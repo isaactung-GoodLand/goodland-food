@@ -222,32 +222,12 @@ export default function AdminCRM() {
               className="w-3 h-3 rounded accent-green-500" />
             有奶茶
           </label>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={filters.phone}
-                onChange={e => { setFilters(f => ({ ...f, phone: e.target.checked })); setPage(1); }}
-                className="w-3 h-3 rounded accent-blue-500" />📞
-            </label>
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={filters.facebook}
-                onChange={e => { setFilters(f => ({ ...f, facebook: e.target.checked })); setPage(1); }}
-                className="w-3 h-3 rounded accent-indigo-500" />💬
-            </label>
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={filters.instagram}
-                onChange={e => { setFilters(f => ({ ...f, instagram: e.target.checked })); setPage(1); }}
-                className="w-3 h-3 rounded accent-pink-500" />📸
-            </label>
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={filters.line}
-                onChange={e => { setFilters(f => ({ ...f, line: e.target.checked })); setPage(1); }}
-                className="w-3 h-3 rounded accent-green-500" />💚
-            </label>
-            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={filters.gmaps}
-                onChange={e => { setFilters(f => ({ ...f, gmaps: e.target.checked })); setPage(1); }}
-                className="w-3 h-3 rounded accent-gray-500" />📍
-            </label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.phone} onChange={e => { setFilters(f => ({ ...f, phone: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-blue-500" />📞</label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.facebook} onChange={e => { setFilters(f => ({ ...f, facebook: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-indigo-500" />💬</label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.instagram} onChange={e => { setFilters(f => ({ ...f, instagram: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-pink-500" />📸</label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.line} onChange={e => { setFilters(f => ({ ...f, line: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-green-500" />💚</label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.gmaps} onChange={e => { setFilters(f => ({ ...f, gmaps: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-gray-500" />📍</label>
           </div>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>
@@ -311,8 +291,11 @@ export default function AdminCRM() {
             <div className="p-4 border-b border-gray-200 bg-white">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg font-bold text-gray-800 truncate">{selected.name}</h2>
+                    {!editing && (
+                      <p className="w-full text-xs text-gray-400 mt-0.5">{selected.address}</p>
+                    )}
                     {!editing ? (
                       <button onClick={() => setEditing(true)}
                         className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 shrink-0">
