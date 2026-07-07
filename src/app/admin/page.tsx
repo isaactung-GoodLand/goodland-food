@@ -264,13 +264,13 @@ export default function AdminCRM() {
                     </button>
                   )}
                   {selected.facebook && (
-                    <button onClick={() => openWindow(`https://facebook.com/${selected.facebook}`)}
+                    <button onClick={() => openWindow(selected.facebook?.startsWith('http') ? selected.facebook : `https://facebook.com/${selected.facebook}`)}
                       className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-700">
                       💬 FB
                     </button>
                   )}
                   {selected.instagram && (
-                    <button onClick={() => openWindow(`https://instagram.com/${selected.instagram.replace('@','')}`)}
+                    <button onClick={() => openWindow(selected.instagram?.startsWith('http') ? selected.instagram : `https://instagram.com/${selected.instagram.replace('@','')}`)}
                       className="px-3 py-1.5 bg-pink-600 text-white text-xs rounded-lg hover:bg-pink-700">
                       📸 IG
                     </button>
