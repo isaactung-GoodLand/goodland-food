@@ -44,10 +44,12 @@ export default function AdminCRM() {
   const [saving, setSaving] = useState(false);
   const [activeIframe, setActiveIframe] = useState<string | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [iframeError, setIframeError] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
   const [rightTopHeight, setRightTopHeight] = useState(360);
+  const iframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isResizing = useRef(false);
 
   const fetchRestaurants = useCallback(async () => {
@@ -118,8 +120,13 @@ export default function AdminCRM() {
   };
 
   const openUrl = (url: string) => {
+    if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
     setIframeUrl(url);
     setActiveIframe(url);
+    setIframeError(false);
+    iframeTimerRef.current = setTimeout(() => {
+      setIframeError(true);
+    }, 3000);
   };
 
   const contactUrl = (r: Restaurant, type: string): string | null => {
@@ -364,10 +371,27 @@ export default function AdminCRM() {
               <div className="h-full relative">
                 <div className="absolute top-0 left-0 right-0 bg-gray-800 text-white text-xs px-3 py-1.5 flex items-center justify-between z-10">
                   <span className="truncate max-w-xs">{iframeUrl}</span>
-                  <button onClick={() => { setIframeUrl(null); setActiveIframe(null); }}
+                  <button onClick={() => { setIframeUrl(null); setActiveIframe(null); setIframeError(false); }}
                     className="ml-2 text-gray-400 hover:text-white shrink-0">✕ 關閉</button>
                 </div>
-                <iframe src={iframeUrl} className="w-full h-full border-0 pt-8" title="content" />
+                {!iframeError ? (
+                  <iframe
+                    src={iframeUrl}
+                    className="w-full h-full border-0 pt-8"
+                    title="content"
+                    onLoad={() => { if (iframeTimerRef.current) { clearTimeout(iframeTimerRef.current); setIframeError(false); } }}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-500 text-sm pt-8">
+                    <div className="text-4xl mb-3">🚫</div>
+                    <div className="mb-2">此網站不允許嵌入顯示</div>
+                    <div className="text-xs text-gray-400 mb-4">{iframeUrl}</div>
+                    <a href={iframeUrl} target="_blank" rel="noreferrer"
+                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                      ↗ 在新視窗開啟
+                    </a>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400 text-sm">
