@@ -291,34 +291,36 @@ export default function AdminCRM() {
               </div>
             </div>
 
-            {/* Contact Log - horizontal layout */}
+            {/* Contact Log - form LEFT, records RIGHT */}
             <div className="flex-1 overflow-hidden bg-white">
               <div className="h-full flex">
-                {/* Log entry form - left side */}
-                <div className="w-[200px] shrink-0 p-3 border-r border-gray-200 flex flex-col gap-2">
+                {/* Log entry form - left, horizontal layout */}
+                <div className="w-[280px] shrink-0 p-3 border-r border-gray-200 flex flex-col gap-2">
                   <div className="text-xs font-semibold text-gray-600 mb-1">📋 新增紀錄</div>
-                  <select value={newType} onChange={e => setNewType(e.target.value)}
-                    className="px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
-                    <option value="phone">📞 電話</option>
-                    <option value="facebook">💬 Facebook</option>
-                    <option value="instagram">📸 Instagram</option>
-                    <option value="line">💚 LINE</option>
-                    <option value="walkin">🚶 親訪</option>
-                    <option value="other">📝 其他</option>
-                  </select>
-                  <textarea value={newNote} onChange={e => setNewNote(e.target.value)}
-                    placeholder="備註..."
-                    rows={3}
-                    className="px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none" />
-                  <button onClick={addContactLog} disabled={addingNote}
-                    className="py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50">
-                    {addingNote ? '...' : '儲存'}
-                  </button>
+                  {/* Type + Note + Save all in ONE horizontal row */}
+                  <div className="flex items-center gap-1.5">
+                    <select value={newType} onChange={e => setNewType(e.target.value)}
+                      className="px-1.5 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 shrink-0">
+                      <option value="phone">📞</option>
+                      <option value="facebook">💬</option>
+                      <option value="instagram">📸</option>
+                      <option value="line">💚</option>
+                      <option value="walkin">🚶</option>
+                      <option value="other">📝</option>
+                    </select>
+                    <input value={newNote} onChange={e => setNewNote(e.target.value)}
+                      placeholder="備註..."
+                      className="flex-1 px-1.5 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0" />
+                    <button onClick={addContactLog} disabled={addingNote}
+                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 shrink-0">
+                      {addingNote ? '...' : '儲存'}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Log list - right side, horizontal scroll */}
+                {/* Log list - right side, horizontal scroll, narrower cards */}
                 <div className="flex-1 overflow-x-auto overflow-y-auto p-3">
-                  <div className="flex gap-2 h-full items-start">
+                  <div className="flex gap-1.5 h-full items-start">
                     {contactLogs.length === 0 ? (
                       <div className="text-xs text-gray-400 flex items-center h-full">尚無紀錄</div>
                     ) : (
@@ -329,15 +331,15 @@ export default function AdminCRM() {
                             setHoveredLog({ log, x: rect.left, y: rect.bottom + 4 });
                           }}
                           onMouseLeave={() => setHoveredLog(null)}
-                          className={`relative shrink-0 w-[120px] p-2 rounded-lg border cursor-default text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
+                          className={`relative shrink-0 w-[80px] p-1.5 rounded-lg border cursor-default text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
                         >
-                          <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${typeColor[log.contact_type] || 'bg-gray-100'}`}>
+                          <div className={`inline-block px-1 py-0.5 rounded text-[9px] font-medium ${typeColor[log.contact_type] || 'bg-gray-100'}`}>
                             {typeLabel[log.contact_type] || log.contact_type}
                           </div>
-                          <div className="text-[10px] text-gray-400 mt-1">
+                          <div className="text-[9px] text-gray-400 mt-0.5">
                             {new Date(log.contact_date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
                           </div>
-                          {log.notes && <div className="text-[10px] text-gray-600 mt-1 truncate">{log.notes}</div>}
+                          {log.notes && <div className="text-[9px] text-gray-600 mt-0.5 truncate">{log.notes}</div>}
                         </div>
                       ))
                     )}
