@@ -64,11 +64,11 @@ export default function AdminCRM() {
     if (cityFilter) params.set('city', cityFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
     if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
-    if (!filters.phone) params.set('no_phone', 'true');
-    if (!filters.facebook) params.set('no_facebook', 'true');
-    if (!filters.instagram) params.set('no_instagram', 'true');
-    if (!filters.line) params.set('no_line', 'true');
-    if (!filters.gmaps) params.set('no_gmaps', 'true');
+    if (!filters.phone) params.set('has_phone', 'true');
+    if (!filters.facebook) params.set('has_facebook', 'true');
+    if (!filters.instagram) params.set('has_instagram', 'true');
+    if (!filters.line) params.set('has_line', 'true');
+    if (!filters.gmaps) params.set('has_gmaps', 'true');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();

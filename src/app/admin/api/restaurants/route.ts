@@ -5,66 +5,60 @@ export async function GET(request: Request) {
   const q = searchParams.get('q') || '';
   const city = searchParams.get('city') || '';
   const uncontacted = searchParams.get('uncontacted') === 'true';
+  const hasMilkTea = searchParams.get('has_milk_tea') === 'true';
+  const hasPhone = searchParams.get('has_phone') === 'true';
+  const hasFacebook = searchParams.get('has_facebook') === 'true';
+  const hasInstagram = searchParams.get('has_instagram') === 'true';
+  const hasLine = searchParams.get('has_line') === 'true';
+  const hasGmaps = searchParams.get('has_gmaps') === 'true';
   const page = parseInt(searchParams.get('page') || '1');
   const limit = 20;
   const offset = (page - 1) * limit;
 
-  // OR conditions for contact fields
-  const noPhone = searchParams.get('no_phone') === 'true';
-  const noFb = searchParams.get('no_facebook') === 'true';
-  const noIg = searchParams.get('no_instagram') === 'true';
-  const noLine = searchParams.get('no_line') === 'true';
-  const noGmaps = searchParams.get('no_gmaps') === 'true';
-
   let where = 'WHERE 1=1';
-  const params: any[] = [];
-  let p = 1;
+  if (q) where += ` AND (name ILIKE $${1} OR address ILIKE $${1})`;
+  if (city) where += ` AND city = $2`;
 
-  if (q) {
-    where += ` AND (name ILIKE $${p} OR address ILIKE $${p} OR phone ILIKE $${p})`;
-    params.push(`%${q}%`);
-    p++;
+  // OR filters: show shops that HAVE at least one of the missing contact info
+  const orConditions: string[] = [];
+  if (hasPhone) orConditions.push('phone IS NOT NULL AND phone != \'\'');
+  if (hasFacebook) orConditions.push('facebook IS NOT NULL AND facebook != \'\'');
+  if (hasInstagram) orConditions.push('instagram IS NOT NULL AND instagram != \'\'');
+  if (hasLine) orConditions.push('line IS NOT NULL AND line != \'\'');
+  if (hasGmaps) orConditions.push('gmaps_url IS NOT NULL AND gmaps_url != \'\'');
+  if (orConditions.length > 0) {
+    where += ` AND (${orConditions.join(' OR ')})`;
   }
-  if (city) {
-    where += ` AND city = $${p}`;
-    params.push(city);
-    p++;
-  }
+
   if (uncontacted) {
     where += ` AND NOT EXISTS (SELECT 1 FROM contact_logs cl WHERE cl.restaurant_id = restaurants.id)`;
   }
-  if (searchParams.get('has_milk_tea') === 'true') {
+  if (hasMilkTea) {
     where += ` AND has_hongkong_milk_tea = true`;
   }
 
-  // OR: exclude shops that have NONE of the selected contact types
-  const anyNoFilter = noPhone || noFb || noIg || noLine || noGmaps;
-  if (anyNoFilter) {
-    const ors: string[] = [];
-    if (noPhone) ors.push(`(phone IS NOT NULL AND phone != '')`);
-    if (noFb) ors.push(`(facebook IS NOT NULL AND facebook != '')`);
-    if (noIg) ors.push(`(instagram IS NOT NULL AND instagram != '')`);
-    if (noLine) ors.push(`(line IS NOT NULL AND line != '')`);
-    if (noGmaps) ors.push(`(gmaps_url IS NOT NULL AND gmaps_url != '')`);
-    if (ors.length > 0) {
-      where += ` AND (${ors.join(' OR ')})`;
-    }
-  }
+  const values: any[] = [];
+  let paramIndex = 1;
+  if (q) { values.push(`%${q}%`); paramIndex++; }
+  if (city) { values.push(city); paramIndex++; }
 
-  const countRes = await pool.query(`SELECT COUNT(*) FROM restaurants ${where}`, params);
-  const total = parseInt(countRes.rows[0].count);
+  // Count
+  const countResult = await pool.query(`SELECT COUNT(*) FROM restaurants ${where}`, values);
+  const total = parseInt(countResult.rows[0].count);
 
-  const res = await pool.query(
-    `SELECT r.*,
-       EXISTS (SELECT 1 FROM contact_logs cl WHERE cl.restaurant_id = r.id AND cl.notes IS NOT NULL AND cl.notes != '') AS has_notes,
-       (SELECT cl.notes FROM contact_logs cl WHERE cl.restaurant_id = r.id ORDER BY cl.contact_date DESC LIMIT 1) AS last_note,
-       (SELECT cl.contact_date FROM contact_logs cl WHERE cl.restaurant_id = r.id ORDER BY cl.contact_date DESC LIMIT 1) AS last_contact_date
-     FROM restaurants r
-     ${where}
-     ORDER BY r.name
-     LIMIT ${limit} OFFSET ${offset}`,
-    params
-  );
+  // Data
+  values.push(limit, offset);
+  const result = await pool.query(`
+    SELECT id, name, city, district, address, phone,
+           facebook, instagram, line, gmaps_url,
+           has_hongkong_milk_tea, rating,
+           created_at,
+           (SELECT notes FROM contact_logs WHERE restaurant_id = restaurants.id ORDER BY created_at DESC LIMIT 1) AS last_note
+    FROM restaurants
+    ${where}
+    ORDER BY name ASC
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `, values);
 
-  return Response.json({ restaurants: res.rows, total, page, pages: Math.ceil(total / limit) });
+  return Response.json({ restaurants: result.rows, total, page });
 }
