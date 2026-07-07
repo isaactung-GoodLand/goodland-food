@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowUpRight, Sparkles, Leaf, Coffee, Newspaper, Quote } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { KettleCarousel } from "@/components/hero/kettle-carousel";
+import { BannerVideo } from "@/components/hero/banner-video";
 import { getProductRepo } from "@/lib/db/products";
 import type { Product } from "@/lib/adapters/types";
 
@@ -38,6 +40,8 @@ export default async function Home() {
     <>
       {/* ───────────────────────── HERO ───────────────────────── */}
       <section className="relative pt-12 pb-24 grain overflow-hidden">
+        {/* Banner Video — 在輪播圖上方 */}
+        <BannerVideo />
         <div className="container-x relative z-10">
           <Reveal>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-forest-50 border border-forest-300 text-forest-700 text-xs uppercase tracking-[0.2em]">
@@ -83,42 +87,7 @@ export default async function Home() {
 
             <div className="lg:col-span-5">
               <Reveal delay={0.2}>
-                <div className="relative aspect-[4/5] rounded-[2rem] bg-gradient-to-br from-forest-700 via-forest-900 to-ink-900 overflow-hidden">
-                  <div className="absolute inset-0 opacity-30 grain" />
-                  {/* Stylized kettle illustration */}
-                  <svg viewBox="0 0 400 500" className="absolute inset-0 w-full h-full">
-                    <defs>
-                      <linearGradient id="cup" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#FBF8F3" stopOpacity="0.92" />
-                        <stop offset="1" stopColor="#EAE0CE" stopOpacity="0.85" />
-                      </linearGradient>
-                    </defs>
-                    {/* Steam */}
-                    <path d="M 180 60 Q 175 40 185 25 Q 195 10 188 -5" stroke="#FBF8F3" strokeOpacity="0.4" strokeWidth="2" fill="none" strokeLinecap="round" />
-                    <path d="M 210 70 Q 205 50 215 35 Q 225 20 218 5" stroke="#FBF8F3" strokeOpacity="0.5" strokeWidth="2" fill="none" strokeLinecap="round" />
-                    {/* Kettle body */}
-                    <rect x="120" y="100" width="160" height="220" rx="28" fill="url(#cup)" />
-                    {/* Tea level */}
-                    <rect x="135" y="180" width="130" height="120" rx="8" fill="#8C6A3A" opacity="0.6" />
-                    {/* Spout */}
-                    <path d="M 280 150 L 320 130 L 320 165 L 280 165 Z" fill="url(#cup)" />
-                    {/* Handle */}
-                    <path d="M 120 130 Q 80 170 80 220 Q 80 270 120 290" stroke="url(#cup)" strokeWidth="14" fill="none" strokeLinecap="round" />
-                    {/* Base/stand */}
-                    <rect x="110" y="330" width="180" height="14" rx="7" fill="#1A2E18" />
-                    <rect x="160" y="344" width="80" height="30" rx="4" fill="#1A2E18" />
-                    <rect x="150" y="374" width="100" height="8" rx="4" fill="#0F1A14" />
-                    {/* Brand mark on cup */}
-                    <text x="200" y="245" textAnchor="middle" fontFamily="serif" fontSize="36" fontStyle="italic" fill="#2F4D2B" opacity="0.7">甘</text>
-                  </svg>
-                  <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between text-cream-50">
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.25em] text-cream-100/70">The Kettle</div>
-                      <div className="font-serif text-xl mt-0.5">快速煮茶機 · 2024</div>
-                    </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-cream-50/15 backdrop-blur-sm border border-cream-50/20">8 min</span>
-                  </div>
-                </div>
+                <KettleCarousel />
               </Reveal>
             </div>
           </div>
@@ -195,9 +164,17 @@ export default async function Home() {
           <div className="grid lg:grid-cols-2 gap-6">
             <Reveal>
               <Link href="/machine" className="group block relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-forest-900 text-cream-50 p-10 transition-transform hover:-translate-y-1">
-                <div className="absolute inset-0 bg-gradient-to-br from-forest-700 via-forest-900 to-ink-900" />
+                {/* 煮茶機產品照 — 背景圖,加暗化遮罩保留文字可讀性 */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/products/tea-machine-1.jpg"
+                  alt="快速煮茶機"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-forest-900/85 via-forest-900/70 to-ink-900/85" />
                 <div className="absolute inset-0 opacity-20 grain" />
-                <div className="relative h-full flex flex-col justify-between">
+                <div className="relative h-full flex flex-col justify-between z-10">
                   <div className="flex items-start justify-between">
                     <Coffee size={32} className="text-forest-300" />
                     <ArrowUpRight size={24} className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />

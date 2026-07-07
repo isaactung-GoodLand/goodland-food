@@ -29,16 +29,24 @@ export class AdapterProductRepo implements ProductRepository {
 
   private buildRegistry(): AdapterRegistry {
     const reg = new AdapterRegistry()
-    const useMock =
-      process.env.USE_MOCK_ADAPTERS === '1' || !process.env.SHOPEE_USE_MOCK && !process.env.META_USE_MOCK
-        ? 'mock'
-        : undefined
+    // mock 優先序:
+    //   1) USE_MOCK_ADAPTERS=1 → 全部強制 mock
+    //   2) SHOPEE_USE_MOCK=1  → Shopee 走 mock (legacy,給線上無 tokens 的當 fallback)
+    //   3) 否則嘗試 live
+    const forceMockAll = process.env.USE_MOCK_ADAPTERS === '1'
+    const shopeeUseMock =
+      forceMockAll ||
+      process.env.SHOPEE_USE_MOCK === '1' ||
+      // 沒有 Shopee tokens → 自動 mock,避免 throw empty
+      (!process.env.SHOPEE_PARTNER_ID &&
+        !process.env.SHOPEE_PARTNER_KEY &&
+        !process.env.SHOPEE_SHOP_ID)
 
     if (process.env.SHOPEE_ENABLED === undefined || process.env.SHOPEE_ENABLED === '1') {
       try {
         reg.register(
           new ShopeeAdapter({
-            mode: process.env.SHOPEE_USE_MOCK === '1' || useMock === 'mock' ? 'mock' : 'live',
+            mode: shopeeUseMock ? 'mock' : 'live',
           })
         )
       } catch {}
@@ -47,7 +55,7 @@ export class AdapterProductRepo implements ProductRepository {
       try {
         reg.register(
           new MetaAdapter({
-            mode: process.env.META_USE_MOCK === '1' || useMock === 'mock' ? 'mock' : 'live',
+            mode: forceMockAll ? 'mock' : 'live',
           })
         )
       } catch {}
@@ -202,22 +210,6 @@ function demoSeed(): Product[] {
       name: '黑白 BLACK & WHITE 全脂淡奶 1罐',
       price: 82, currency: 'TWD',
       url: IOPEN, image: IMG_MILK,
-      inStock: true, syncedAt: new Date('2026-06-28'),
-    },
-
-    // ── 黑白全脂淡奶 48罐/箱 ──
-    {
-      id: 'shopee-milk-48', platform: 'shopee', externalId: 'milk-48',
-      name: '黑白淡奶 一箱48罐（立陶宛進口）',
-      price: 3600, currency: 'TWD',
-      url: SHOPEE, image: IMG_MILK,
-      inStock: true, syncedAt: new Date('2026-06-28'),
-    },
-    {
-      id: 'coupang-milk-48', platform: 'coupang', externalId: 'milk-48',
-      name: '黑白淡奶 一箱48罐（立陶宛進口）',
-      price: 3600, currency: 'TWD',
-      url: COUPANG, image: IMG_MILK,
       inStock: true, syncedAt: new Date('2026-06-28'),
     },
 

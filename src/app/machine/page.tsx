@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Layers, ArrowUpRight, Coffee, Check } from "lucide-react";
+import { Clock, Layers, ArrowUpRight, Coffee, Check, Play } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { Reveal } from "@/components/reveal";
 
@@ -17,6 +17,21 @@ const HIGHLIGHTS = [
   "專利高腳出茶口 · 不滴、不灑、不燙手",
   "獨立包裝茶包專用槽位",
   "可用即沖茶包、拼配散茶、茶磚",
+];
+
+const VIDEOS = [
+  {
+    id: "-2gp22w12hk",
+    title: "煮茶機介紹(中文)",
+    desc: "3 分鐘看完機器構造、控制面板、出茶設計。",
+    duration: "3:27",
+  },
+  {
+    id: "p4OvA4SWllo",
+    title: "實機操作 — 大排檔咖啡",
+    desc: "從裝茶、加水到按下啟動,完整沖煮流程。",
+    duration: "1:56",
+  },
 ];
 
 export default function MachinePage() {
@@ -40,14 +55,13 @@ export default function MachinePage() {
             <Reveal>
               <div className="relative aspect-[4/5] rounded-[2rem] bg-gradient-to-br from-forest-700 via-forest-900 to-ink-900 overflow-hidden">
                 <div className="absolute inset-0 opacity-20 grain" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-32 h-56 rounded-2xl bg-cream-50/10 backdrop-blur-sm border border-cream-50/20 relative">
-                    <div className="absolute top-4 left-4 right-4 h-32 rounded-xl bg-cream-50/15" />
-                    <div className="absolute bottom-12 left-6 right-6 h-10 rounded-full bg-forest-500/40" />
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-12 h-1 rounded-full bg-cream-50/40" />
-                  </div>
-                </div>
-                <div className="absolute bottom-8 left-8 text-cream-50 font-serif text-2xl italic">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/products/tea-machine-1.jpg"
+                  alt="三點三快速煮茶機"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute bottom-8 left-8 text-cream-50 font-serif text-2xl italic drop-shadow-lg">
                   The Kettle. 2024
                 </div>
               </div>
@@ -79,6 +93,67 @@ export default function MachinePage() {
                 </div>
               </Reveal>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video demos — embedded below the photo */}
+      <section className="pb-20">
+        <div className="container-x">
+          <Reveal>
+            <div className="flex items-end justify-between gap-6 mb-10">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-forest-700 font-medium">
+                  Watch · 影音介紹
+                </p>
+                <h2 className="mt-2 font-serif text-3xl md:text-4xl font-light leading-tight">
+                  看機器 <span className="italic text-forest-700">怎麼用。</span>
+                </h2>
+              </div>
+              <a
+                href="https://www.youtube.com/@KnowOrUnknow/search?query=煮茶機"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:inline-flex items-center gap-2 text-sm text-ink-700 hover:text-forest-700 transition-colors"
+              >
+                看更多煮茶機影片 <ArrowUpRight size={16} />
+              </a>
+            </div>
+          </Reveal>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {VIDEOS.map((v, i) => (
+              <Reveal key={v.id} delay={i * 0.1}>
+                <div className="group">
+                  <div className="relative aspect-video rounded-2xl overflow-hidden bg-ink-900 shadow-lg">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${v.id}`}
+                      title={v.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full"
+                    />
+                  </div>
+                  <div className="mt-4 flex items-start gap-4">
+                    <div className="shrink-0 w-10 h-10 rounded-full bg-forest-700 text-cream-50 flex items-center justify-center">
+                      <Play size={16} fill="currentColor" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-lg text-ink-900 leading-snug">
+                        {v.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-ink-700 leading-relaxed">
+                        {v.desc}
+                      </p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-ink-500">
+                        {v.duration}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getProductRepo } from "@/lib/db/products";
 import { Reveal } from "@/components/reveal";
 import { PageShell } from "@/components/page-shell";
-import { ArrowUpRight, Sparkles, Package } from "lucide-react";
+import { ArrowUpRight, Sparkles, Package, ShoppingBag } from "lucide-react";
 import type { Product } from "@/lib/adapters/types";
 
 export const metadata: Metadata = {
@@ -38,14 +38,40 @@ const PLATFORM_ACCENT: Record<Product["platform"], string> = {
   native: "text-forest-700",
 };
 
-function formatPrice(p: Product) {
-  return `NT$ ${p.price.toLocaleString()}`;
+// 多平台連結:每個商品都附上 蝦皮 / 酷澎 / LINE 三家連結
+// LINE 商城 URL:之後拿到正式的商店 ID 改 GOODLAND_LINE_SHOP 即可
+const GOODLAND_LINE_SHOP = "https://shop.line.me/" // TODO: 改成實際的 @goodlandfood URL
+
+function getAlternatePlatforms(name: string) {
+  // 從商品名產生 Coupang 賣場搜尋(因為 Coupang 商品 URL 是 hash,沒法精準生成)
+  // 從商品名搜 LINE 商城 + 甘田關鍵字
+  const searchTerm = encodeURIComponent(name.replace(/\s+/g, " ").trim())
+  return [
+    {
+      name: "蝦皮" as const,
+      url: `https://shopee.tw/search?keyword=${searchTerm}`,
+      // 注意:這是 search 結果頁 — 真正的商品 URL 在 p.url(主連結)
+      accent: "text-orange-600",
+    },
+    {
+      name: "酷澎" as const,
+      url: `https://shop.tw.coupang.com/goodlandfood?search=${searchTerm}`,
+      accent: "text-red-600",
+    },
+    {
+      name: "LINE" as const,
+      url: `${GOODLAND_LINE_SHOP}search?q=${searchTerm}`,
+      accent: "text-green-600",
+    },
+  ]
 }
 
+// 不顯示價格
 export default async function ProductsPage() {
   const repo = getProductRepo();
   const products = await repo.listAll();
-  const inStock = products.filter((p) => p.inStock !== false).length;
+  // 只顯示有庫存的（inStock !== false）
+  const inStock = products.filter((p) => p.inStock !== false);
 
   return (
     <>
@@ -65,9 +91,9 @@ export default async function ProductsPage() {
         <Reveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { v: products.length, l: "商品總數" },
-              { v: inStock, l: "現貨供應" },
-              { v: products.length - inStock, l: "補貨中" },
+              { v: inStock.length, l: "現貨供應" },
+              { v: products.length - inStock.length, l: "補貨中" },
+              { v: "蝦皮直送", l: "點擊看價" },
               { v: "100%", l: "台灣配送" },
             ].map((s) => (
               <div
@@ -84,9 +110,9 @@ export default async function ProductsPage() {
         </Reveal>
       </section>
 
-      {/* Product grid */}
+      {/* Product grid — 只列現貨,點擊跳蝦皮看價/規格 */}
       <section className="container-x pb-24">
-        {products.length === 0 ? (
+        {inStock.length === 0 ? (
           <Reveal>
             <div className="text-center py-20 border border-dashed border-ink-900/20 rounded-2xl">
               <Package className="w-12 h-12 mx-auto text-ink-300 mb-4" />
@@ -95,17 +121,16 @@ export default async function ProductsPage() {
           </Reveal>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((p, i) => (
+            {inStock.map((p, i) => {
+              const alternates = getAlternatePlatforms(p.name)
+              return (
               <Reveal key={p.id} delay={i * 0.05}>
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block rounded-2xl border border-ink-900/10 bg-white p-5 hover:border-forest-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
+                <div
+                  className="group relative rounded-2xl border border-ink-900/10 bg-white p-5 hover:border-forest-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
                   data-testid="product-card"
                   data-product-id={p.id}
                 >
-                  <div className="relative aspect-[4/3] bg-cream-100 rounded-xl overflow-hidden">
+                  <div className="relative aspect-square bg-cream-100 rounded-xl overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={p.image}
@@ -113,38 +138,57 @@ export default async function ProductsPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
                     />
-                    {p.inStock === false && (
-                      <div className="absolute top-3 right-3 px-3 py-1 bg-cream-50/90 backdrop-blur rounded-full text-xs text-ink-700 border border-ink-900/10">
-                        補貨中
-                      </div>
-                    )}
-                    {p.inStock !== false && (
-                      <div className="absolute top-3 right-3 px-3 py-1 bg-forest-700 text-cream-50 rounded-full text-xs flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        現貨
-                      </div>
-                    )}
+                    {/* 圖片層本身做成連結 — 點下去到主平台 */}
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0"
+                      aria-label={`在 ${PLATFORM_LABEL[p.platform]} 查看 ${p.name}`}
+                    />
+                    <div className="absolute top-3 right-3 px-3 py-1 bg-forest-700 text-cream-50 rounded-full text-xs flex items-center gap-1 z-10 pointer-events-none">
+                      <Sparkles className="w-3 h-3" />
+                      現貨
+                    </div>
                   </div>
 
                   <div className="mt-5">
                     <p
                       className={`text-[10px] uppercase tracking-[0.2em] font-medium ${PLATFORM_ACCENT[p.platform]}`}
                     >
-                      {PLATFORM_LABEL[p.platform]}
+                      {PLATFORM_LABEL[p.platform]} · 點擊看價
                     </p>
                     <h3 className="mt-2 font-serif text-xl text-ink-900 leading-snug">
                       {p.name}
                     </h3>
                     <div className="mt-3 flex items-center justify-between">
-                      <p className="font-serif text-2xl text-ink-900">
-                        {formatPrice(p)}
-                      </p>
-                      <ArrowUpRight className="w-5 h-5 text-ink-400 group-hover:text-forest-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                      {/* 平台選擇器 — hover 時浮出 */}
+                      <div className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">
+                        <div className="flex items-center gap-1 bg-cream-50 border border-ink-900/10 rounded-full px-2 py-1 shadow-sm">
+                          <span className="text-[10px] uppercase tracking-wider text-ink-500 pl-1">
+                            <ShoppingBag className="w-3 h-3 inline mr-0.5 -mt-0.5" />
+                            也可在
+                          </span>
+                          {alternates.map((alt) => (
+                            <a
+                              key={alt.name}
+                              href={alt.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full hover:bg-cream-100 ${alt.accent}`}
+                            >
+                              {alt.name}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                      <ArrowUpRight className="w-5 h-5 text-ink-400 group-hover:text-forest-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all shrink-0" />
                     </div>
                   </div>
-                </a>
+                </div>
               </Reveal>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
