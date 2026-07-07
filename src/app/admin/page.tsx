@@ -200,11 +200,17 @@ export default function AdminCRM() {
             <span>🍜 CRM</span>
             <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
           </h1>
-          <input
-            type="text" placeholder="🔍 搜尋..."
-            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+          <div className="relative">
+            <button onClick={() => { const inp = document.getElementById('search-input') as HTMLInputElement; inp?.classList.toggle('hidden'); inp?.focus(); }}
+              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-500 hover:bg-gray-50">
+              🔍 <span className="text-gray-400 text-[10px]">搜尋</span>
+            </button>
+            <input id="search-input" type="text" placeholder="店名/地址..."
+              value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+              onBlur={e => { if (!e.target.value) e.target.classList.add('hidden'); }}
+              className="hidden absolute top-full left-0 right-0 mt-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white z-10 outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
           <select value={cityFilter} onChange={e => { setCityFilter(e.target.value); setPage(1); }}
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
             <option value="">所有縣市</option>
@@ -293,9 +299,6 @@ export default function AdminCRM() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg font-bold text-gray-800 truncate">{selected.name}</h2>
-                    {!editing && (
-                      <p className="w-full text-xs text-gray-400 mt-0.5">{selected.address}</p>
-                    )}
                     {!editing ? (
                       <button onClick={() => setEditing(true)}
                         className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 shrink-0">
@@ -308,25 +311,20 @@ export default function AdminCRM() {
                           {saving ? '...' : '💾'}
                         </button>
                         <button onClick={() => { setEditing(false); setEditForm(selected); }}
-                          className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300">
-                          ✕
-                        </button>
+                          className="px-3 py-1 bg-gray-400 text-white text-xs rounded-lg hover:bg-gray-500">✖</button>
                         <button onClick={handleDelete}
-                          className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 shrink-0">
-                          🗑
-                        </button>
+                          className="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">🗑</button>
                       </div>
                     )}
                   </div>
-                  {editing ? (
+                  {!editing && <p className="text-xs text-gray-400 mt-1">{selected.address}</p>}
+                  {editing && (
                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-lg">
                       <input value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="電話" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.facebook || ''} onChange={e => setEditForm(p => ({ ...p, facebook: e.target.value }))} placeholder="Facebook" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.instagram || ''} onChange={e => setEditForm(p => ({ ...p, instagram: e.target.value }))} placeholder="Instagram" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.line || ''} onChange={e => setEditForm(p => ({ ...p, line: e.target.value }))} placeholder="LINE" className="px-2 py-1 border rounded text-sm" />
                     </div>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">{selected.address}</p>
                   )}
                 </div>
                 {/* Contact action buttons - window.open */}
