@@ -45,7 +45,7 @@ export default function AdminCRM() {
   const [saving, setSaving] = useState(false);
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
-  const [rightTopHeight, setRightTopHeight] = useState(360);
+  const [rightTopHeight, setRightTopHeight] = useState('20vh');
   const isResizing = useRef(false);
 
   const fetchRestaurants = useCallback(async () => {
@@ -156,7 +156,7 @@ export default function AdminCRM() {
     const onMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
       const vh = window.innerHeight;
-      setRightTopHeight(Math.max(200, Math.min(vh - 80, e.clientY - 56)));
+      setRightTopHeight(`${e.clientY - 56}px`);
     };
     const onMouseUp = () => { isResizing.current = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
     window.addEventListener('mousemove', onMouseMove);
