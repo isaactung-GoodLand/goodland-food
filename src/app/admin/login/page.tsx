@@ -69,7 +69,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="text-xs text-gray-400 text-center mt-6">
-          預設帳號：admin@goodland.tw / admin123
+          預設帳號：goodland / isaactung0902
         </p>
       </div>
     </div>
