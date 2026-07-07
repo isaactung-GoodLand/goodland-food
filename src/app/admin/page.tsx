@@ -16,6 +16,9 @@ interface Restaurant {
   rating: number | null;
   gmaps_url: string;
   has_hongkong_milk_tea: boolean;
+  has_notes?: boolean;
+  last_note?: string;
+  last_contact_date?: string;
   contact_logs?: any[];
 }
 
@@ -32,6 +35,7 @@ export default function AdminCRM() {
   const [selected, setSelected] = useState<Restaurant | null>(null);
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('');
+  const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -46,6 +50,9 @@ export default function AdminCRM() {
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
   const [rightTopHeight, setRightTopHeight] = useState('20vh');
+  const [leftPanelWidth, setLeftPanelWidth] = useState(220);
+  const leftResizerRef = useRef<HTMLDivElement>(null);
+  const isLeftResizing = useRef(false);
   const isResizing = useRef(false);
 
   const fetchRestaurants = useCallback(async () => {
@@ -53,6 +60,7 @@ export default function AdminCRM() {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
     if (cityFilter) params.set('city', cityFilter);
+    if (uncontactedOnly) params.set('uncontacted', 'true');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();
@@ -155,7 +163,6 @@ export default function AdminCRM() {
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
-      const vh = window.innerHeight;
       setRightTopHeight(`${e.clientY - 56}px`);
     };
     const onMouseUp = () => { isResizing.current = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
@@ -164,15 +171,27 @@ export default function AdminCRM() {
     return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
   }, []);
 
+  // Left panel resizer drag
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isLeftResizing.current) return;
+      setLeftPanelWidth(Math.max(120, Math.min(500, e.clientX)));
+    };
+    const onMouseUp = () => { isLeftResizing.current = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* LEFT PANEL - 220px fixed */}
-      <div className="w-[220px] border-r border-gray-200 flex flex-col bg-white shrink-0">
+      {/* LEFT PANEL - resizable width */}
+      <div style={{ width: leftPanelWidth }} className="border-r border-gray-200 flex flex-col bg-white shrink-0 relative">
         <div className="p-3 border-b border-gray-200 space-y-2">
           <h1 className="text-sm font-bold text-gray-800 flex items-center justify-between">
-          <span>🍜 CRM</span>
-          <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
-        </h1>
+            <span>🍜 CRM</span>
+            <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
+          </h1>
           <input
             type="text" placeholder="🔍 搜尋..."
             value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -183,6 +202,12 @@ export default function AdminCRM() {
             <option value="">所有縣市</option>
             {cities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+            <input type="checkbox" checked={uncontactedOnly}
+              onChange={e => { setUncontactedOnly(e.target.checked); setPage(1); }}
+              className="w-3 h-3 rounded accent-red-500" />
+            未聯絡
+          </label>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -200,17 +225,17 @@ export default function AdminCRM() {
                 >
                   {/* Indicators */}
                   <span className="absolute top-2 right-2 flex gap-0.5">
-                    {lastLog && <span title={`有紀錄: ${lastLog.notes || typeLabel[lastLog.contact_type] || ''}`} className="text-red-500 font-bold text-xs">*</span>}
-                    {r.has_hongkong_milk_tea && <span className="text-green-500 font-bold text-xs">*</span>}
+                    {r.has_notes && <span title={r.last_note || '有備註'} className="w-2 h-2 rounded-full bg-red-500 shrink-0" />}
+                    {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10">{r.name}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{r.city}</div>
-                  {/* Hover tooltip for last log */}
-                  {lastLog && (
+                  {/* Hover tooltip */}
+                  {r.last_note && (
                     <div className="absolute left-full top-0 ml-2 z-50 hidden group-hover:block pointer-events-none">
                       <div className="bg-gray-800 text-white text-xs rounded px-2 py-1.5 whitespace-nowrap">
-                        <div>{lastLog.notes || typeLabel[lastLog.contact_type]}</div>
-                        <div className="text-gray-400 text-[10px]">{new Date(lastLog.contact_date).toLocaleString('zh-TW')}</div>
+                        <div>{r.last_note}</div>
+                        <div className="text-gray-400 text-[10px]">{r.last_contact_date ? new Date(r.last_contact_date).toLocaleString('zh-TW') : ''}</div>
                       </div>
                     </div>
                   )}
@@ -227,6 +252,13 @@ export default function AdminCRM() {
             className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">›</button>
         </div>
       </div>
+
+      {/* LEFT RESIZER HANDLE */}
+      <div
+        ref={leftResizerRef}
+        onMouseDown={() => { isLeftResizing.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; }}
+        className="w-1.5 bg-gray-100 hover:bg-blue-100 cursor-col-resize shrink-0 transition"
+      />
 
       {/* RIGHT PANEL */}
       {selected ? (
