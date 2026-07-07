@@ -37,6 +37,7 @@ export default function AdminCRM() {
   const [cityFilter, setCityFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
+  const [filters, setFilters] = useState({ phone: true, facebook: true, instagram: true, line: true, gmaps: true });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,11 @@ export default function AdminCRM() {
     if (cityFilter) params.set('city', cityFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
     if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
+    if (!filters.phone) params.set('no_phone', 'true');
+    if (!filters.facebook) params.set('no_facebook', 'true');
+    if (!filters.instagram) params.set('no_instagram', 'true');
+    if (!filters.line) params.set('no_line', 'true');
+    if (!filters.gmaps) params.set('no_gmaps', 'true');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();
@@ -216,6 +222,33 @@ export default function AdminCRM() {
               className="w-3 h-3 rounded accent-green-500" />
             有奶茶
           </label>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={filters.phone}
+                onChange={e => { setFilters(f => ({ ...f, phone: e.target.checked })); setPage(1); }}
+                className="w-3 h-3 rounded accent-blue-500" />📞
+            </label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={filters.facebook}
+                onChange={e => { setFilters(f => ({ ...f, facebook: e.target.checked })); setPage(1); }}
+                className="w-3 h-3 rounded accent-indigo-500" />💬
+            </label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={filters.instagram}
+                onChange={e => { setFilters(f => ({ ...f, instagram: e.target.checked })); setPage(1); }}
+                className="w-3 h-3 rounded accent-pink-500" />📸
+            </label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={filters.line}
+                onChange={e => { setFilters(f => ({ ...f, line: e.target.checked })); setPage(1); }}
+                className="w-3 h-3 rounded accent-green-500" />💚
+            </label>
+            <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={filters.gmaps}
+                onChange={e => { setFilters(f => ({ ...f, gmaps: e.target.checked })); setPage(1); }}
+                className="w-3 h-3 rounded accent-gray-500" />📍
+            </label>
+          </div>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>
         <div className="flex-1 overflow-y-auto">
