@@ -119,14 +119,26 @@ export default function AdminCRM() {
     setAddingNote(false);
   };
 
+  // Sites that block iframes → route through server-side proxy
+  const BLOCKED_HOSTS = ['facebook.com', 'www.facebook.com', 'instagram.com', 'www.instagram.com', 'line.me', 'www.line.me', 'liff.line.me'];
+  const needsProxy = (url: string) => {
+    try {
+      const u = new URL(url);
+      return BLOCKED_HOSTS.includes(u.host) || u.host.endsWith('.facebook.com') || u.host.endsWith('.instagram.com') || u.host.endsWith('.line.me');
+    } catch { return false; }
+  };
+
   const openUrl = (url: string) => {
     if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
-    setIframeUrl(url);
+    const proxiedUrl = needsProxy(url)
+      ? `/api/proxy?url=${encodeURIComponent(url)}`
+      : url;
+    setIframeUrl(proxiedUrl);
     setActiveIframe(url);
     setIframeError(false);
     iframeTimerRef.current = setTimeout(() => {
       setIframeError(true);
-    }, 3000);
+    }, 5000);
   };
 
   const contactUrl = (r: Restaurant, type: string): string | null => {
