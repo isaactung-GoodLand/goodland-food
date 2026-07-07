@@ -216,24 +216,14 @@ export default function AdminCRM() {
             <option value="">所有縣市</option>
             {cities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-            <input type="checkbox" checked={uncontactedOnly}
-              onChange={e => { setUncontactedOnly(e.target.checked); setPage(1); }}
-              className="w-3 h-3 rounded accent-red-500" />
-            未聯絡
-          </label>
-          <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
-            <input type="checkbox" checked={hasMilkTeaOnly}
-              onChange={e => { setHasMilkTeaOnly(e.target.checked); setPage(1); }}
-              className="w-3 h-3 rounded accent-green-500" />
-            有奶茶
-          </label>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.phone} onChange={e => { setFilters(f => ({ ...f, phone: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-blue-500" />📞</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.facebook} onChange={e => { setFilters(f => ({ ...f, facebook: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-indigo-500" />💬</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.instagram} onChange={e => { setFilters(f => ({ ...f, instagram: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-pink-500" />📸</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.line} onChange={e => { setFilters(f => ({ ...f, line: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-green-500" />💚</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.gmaps} onChange={e => { setFilters(f => ({ ...f, gmaps: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-gray-500" />📍</label>
+            <button onClick={() => { setUncontactedOnly(u => !u); setPage(1); }} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${uncontactedOnly ? 'bg-red-50 border-red-300 text-red-600' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>❌</button>
+            <button onClick={() => { setHasMilkTeaOnly(m => !m); setPage(1); }} className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border ${hasMilkTeaOnly ? 'bg-green-50 border-green-300 text-green-600' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>🧋</button>
           </div>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>
@@ -317,7 +307,9 @@ export default function AdminCRM() {
                       </div>
                     )}
                   </div>
-                  {!editing && <p className="text-xs text-gray-400 mt-1">{selected.address}</p>}
+                  {!editing && (
+                    <div className="mt-1 text-sm text-gray-700 break-all leading-relaxed">{selected.address}</div>
+                  )}
                   {editing && (
                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-lg">
                       <input value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="電話" className="px-2 py-1 border rounded text-sm" />
