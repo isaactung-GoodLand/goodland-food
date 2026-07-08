@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const ADMIN_EMAIL = 'goodland';
-const ADMIN_PASSWORD = 'REDACTED_PASSWORD_2';
+const ADMIN_PASSWORD = 'REDACTED_PASSWORD_1';
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();

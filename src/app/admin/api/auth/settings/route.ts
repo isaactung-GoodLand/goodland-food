@@ -6,7 +6,7 @@ export async function PUT(request: Request) {
   const { old_password, new_password } = body;
 
   const ADMIN_EMAIL = 'goodland';
-  const ADMIN_PASSWORD = 'REDACTED_PASSWORD_2';
+  const ADMIN_PASSWORD = 'REDACTED_PASSWORD_1';
 
   if (old_password !== ADMIN_PASSWORD) {
     return NextResponse.json({ error: '舊密碼錯誤' }, { status: 403 });
