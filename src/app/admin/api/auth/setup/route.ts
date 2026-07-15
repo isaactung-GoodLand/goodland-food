@@ -16,14 +16,14 @@ export async function POST() {
       );
     `);
 
-    // Seed default admin (bcrypt hash of myLand0933885114, cost 12)
+    // Seed/update default admin (bcrypt $2b$ hash of myLand0933885114, cost 12)
     await client.query(`
       INSERT INTO admin_users (email, password)
       VALUES (
         'goodland@goodland-food.com',
         '$2b$12$./mzRd9lPwl188CAQ/2rq.nIhaGVrCHghC99AxW41YKl7k/fyuoH.'
       )
-      ON CONFLICT (email) DO NOTHING;
+      ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password, updated_at = NOW();
     `);
 
     return NextResponse.json({ ok: true, message: 'admin_users table ready' });
