@@ -83,7 +83,7 @@ function LoginForm() {
         </form>
 
         <div className="mt-4 text-center">
-          <a href="/admin/reset" className="text-xs text-gray-400 hover:text-gray-600">
+          <a href="/admin/forgot" className="text-xs text-gray-400 hover:text-gray-600">
             忘記密碼？
           </a>
         </div>

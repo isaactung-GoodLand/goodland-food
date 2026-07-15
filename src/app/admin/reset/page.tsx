@@ -122,6 +122,11 @@ function ResetForm() {
               想起密碼了？返回登入
             </a>
           </div>
+          <div className="text-center">
+            <a href="/admin/forgot" className="text-sm text-gray-400 hover:text-gray-600">
+              沒有Token？向管理員申請
+            </a>
+          </div>
         </form>
       </div>
     </div>

@@ -7,6 +7,7 @@ export async function middleware(request: NextRequest) {
   // Allow public admin routes (no auth required)
   if (
     pathname === '/admin/login' ||
+    pathname === '/admin/forgot' ||
     pathname === '/admin/reset' ||
     pathname.startsWith('/admin/api/auth/recover') ||
     pathname.startsWith('/admin/api/auth/reset')
