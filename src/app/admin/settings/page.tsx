@@ -20,6 +20,10 @@ export default function SettingsPage() {
       setMsg({ type: 'err', text: '新密碼與確認密碼不符' });
       return;
     }
+    if (newPw.length < 8) {
+      setMsg({ type: 'err', text: '新密碼至少 8 個字元' });
+      return;
+    }
     setLoading(true);
     setMsg(null);
     const res = await fetch('/admin/api/auth/settings', {
@@ -50,11 +54,6 @@ export default function SettingsPage() {
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">目前帳號</label>
-            <input type="text" value="goodland" disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-500" />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">舊密碼</label>
             <input type="password" value={oldPw} onChange={e => setOldPw(e.target.value)}
               placeholder="輸入舊密碼"
@@ -63,7 +62,7 @@ export default function SettingsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">新密碼</label>
             <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
-              placeholder="輸入新密碼（至少4字元）"
+              placeholder="輸入新密碼（至少 8 字元）"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
@@ -84,6 +83,15 @@ export default function SettingsPage() {
             {loading ? '更新中...' : '更新密碼'}
           </button>
         </form>
+
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <h2 className="text-sm font-medium text-gray-700 mb-2">忘記密碼？</h2>
+          <p className="text-xs text-gray-500 mb-2">聯繫管理員產生重設連結，或直接操作資料庫。</p>
+          <a href="/admin/reset"
+            className="text-xs text-blue-600 hover:underline">
+            已有重設連結 →
+          </a>
+        </div>
       </div>
     </div>
   );

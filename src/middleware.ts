@@ -1,14 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth/session';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect /admin routes (but allow /admin/login)
-  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login') && !pathname.startsWith('/admin/api')) {
-    const session = request.cookies.get('admin_session');
+  // Allow public admin routes (no auth required)
+  if (
+    pathname === '/admin/login' ||
+    pathname === '/admin/reset' ||
+    pathname.startsWith('/admin/api/auth/recover') ||
+    pathname.startsWith('/admin/api/auth/reset')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Protect /admin routes (non-public)
+  if (pathname.startsWith('/admin')) {
+    const sessionId = request.cookies.get('admin_session')?.value;
+
+    if (!sessionId) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+
+    const session = await getSessionFromCookie(sessionId);
     if (!session) {
       const loginUrl = new URL('/admin/login', request.url);
-      loginUrl.searchParams.set('from', pathname);
+      loginUrl.searchParams.set('reason', 'expired');
       return NextResponse.redirect(loginUrl);
     }
   }

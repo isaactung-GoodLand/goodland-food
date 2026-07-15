@@ -240,13 +240,8 @@ export default function AdminCRM() {
     }
   };
 
-<<<<<<< Updated upstream
   const openWindow = (url: string, name?: string) => {
     window.open(url, name || 'crm_popup', 'width=900,height=700,left=100,top=100,noopener,noreferrer');
-=======
-  const openWindow = (url: string) => {
-    window.open(url, 'goodland_popup', 'width=700,height=600,left=100,top=100,noopener,noreferrer');
->>>>>>> Stashed changes
   };
 
   // Convert Google Maps URL to embed URL
@@ -298,6 +293,12 @@ export default function AdminCRM() {
     return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
   }, []);
 
+  const handleLogout = async () => {
+    if (!confirm('確定要登出？')) return;
+    await fetch('/admin/api/auth/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ height: '100vh', overflow: 'hidden' }}>
       {/* LEFT PANEL - resizable width */}
@@ -305,7 +306,10 @@ export default function AdminCRM() {
         <div className="p-3 border-b border-gray-200 space-y-2">
           <h1 className="text-sm font-bold text-gray-800 flex items-center justify-between">
             <span>🍜 CRM</span>
-            <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
+            <div className="flex items-center gap-2">
+              <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-600" title="登出">🚪</button>
+              <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
+            </div>
           </h1>
           <div className="relative">
             <button onClick={() => { const inp = document.getElementById('search-input') as HTMLInputElement; inp?.classList.toggle('hidden'); inp?.focus(); }}
