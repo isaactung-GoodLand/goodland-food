@@ -11,7 +11,7 @@ function runPsql(sql: string): Promise<{ rc: number; stdout: string; stderr: str
     let stdout = '', stderr = '';
     proc.stdout?.on('data', (d) => (stdout += d));
     proc.stderr?.on('data', (d) => (stderr += d));
-    proc.on('close', (rc) => resolve({ rc, stdout, stderr }));
+    proc.on('close', (rc) => resolve({ rc: rc ?? 0, stdout, stderr }));
   });
 }
 
