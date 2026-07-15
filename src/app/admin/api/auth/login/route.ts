@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-
-const ADMIN_EMAIL = 'goodland';
-const ADMIN_PASSWORD = 'REDACTED_PASSWORD_1';
+import { getEnv } from '@/lib/env';
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
+  const { ADMIN_EMAIL, ADMIN_PASSWORD } = getEnv();
   if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
     const res = NextResponse.json({ ok: true });
     res.cookies.set('admin_session', Buffer.from(`${email}:${password}`).toString('base64'), {
