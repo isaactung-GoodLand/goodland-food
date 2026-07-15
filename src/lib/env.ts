@@ -2,8 +2,8 @@ import { z } from 'zod'
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().url(),
-  UPSTASH_REDIS_REST_URL: z.string().url(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
   // Admin CRM credentials (previously hard-coded; rotated to env vars 2026-07-15
   // after the 4587c66 incident exposed them in git history)

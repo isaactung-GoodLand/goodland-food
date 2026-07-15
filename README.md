@@ -44,8 +44,47 @@ src/
 │  ├─ footer.tsx            # 深綠 Footer (CTA + 連結 + 著作權)
 │  ├─ reveal.tsx            # SSR-safe IntersectionObserver 進場動畫
 │  └─ page-shell.tsx        # 內頁統一 header + eyebrow
-└─ lib/utils.ts             # cn() className 工具
+└─ lib/
+   ├─ utils.ts              # cn() className 工具
+   ├─ env.ts                # Zod schema 驗證所有 process.env（fail-fast）
+   └─ db.ts                 # Neon Postgres pool
 ```
+
+## 🔐 環境變數
+
+所有 env 在 `src/lib/env.ts` 用 Zod schema 強制驗證。少設或格式錯就 fail-fast 拋錯。
+
+### 本機開發
+
+```bash
+cp .env.example .env.local       # 沒有 .env.example 就從 README 對照建
+# 編輯 .env.local,把 ADMIN_PASSWORD 改成真實密碼
+npm run dev
+```
+
+`.env.local` 不會被 git 追蹤（`.git*` 已 gitignore）。
+
+### Vercel 部署
+
+Project → Settings → Environment Variables，逐個加：
+
+| 名稱 | 必填 | 用途 |
+|---|---|---|
+| `DATABASE_URL` | ✅ | Neon Postgres 連線字串 |
+| `UPSTASH_REDIS_REST_URL` | ✅ | Upstash Redis（rate limit）|
+| `UPSTASH_REDIS_REST_TOKEN` | ✅ | Upstash Redis token |
+| `NEXT_PUBLIC_SITE_URL` | ⭕ | 正式網址（影響 OG / sitemap）|
+| `ADMIN_EMAIL` | ✅ | `/admin` 登入帳號（預設 `goodland`）|
+| `ADMIN_PASSWORD` | ✅ | `/admin` 登入密碼 |
+
+設完按 **Save**，下次 deploy 自動生效。
+
+### ⚠️ 安全紀律
+
+- 任何 **密碼 / API key / token** 一律走 env var，**絕不寫進程式碼或 commit**
+- 絕不 `console.log(process.env)` / `console.log(getEnv())` — debug 完立刻拿掉
+- 改完 `ADMIN_PASSWORD` 後需重新 deploy 才生效（Vercel env 是 build-time / runtime 注入）
+- 詳 `src/lib/env.ts` 與 `.env.example`
 
 ## 🎨 設計系統
 
