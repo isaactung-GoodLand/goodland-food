@@ -17,12 +17,10 @@ export async function POST(request: Request) {
     });
   }
 
-  // In production this would send an email.
-  // For admin recovery: display the token directly so the owner can set a new password.
+  // Token sent via side-channel (email in production).
+  // For self-hosted admin: operator fetches token from Neon console, then shares
+  // the reset URL manually with the owner.
   return NextResponse.json({
-    message: '如果帳號存在，重設連結已產生。',
-    // For development/admin: include the token directly
-    // Remove this line in production and send via email instead
-    recovery_token: token,
+    message: '如果帳號存在，重設連結已產生。請查看管理員提供的郵件或即時通訊。',
   });
 }
