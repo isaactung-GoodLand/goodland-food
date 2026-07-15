@@ -18,7 +18,7 @@ INSERT INTO admin_users (email, password)
 VALUES (
   'goodland@goodland-food.com',
   -- plain: myLand0933885114
-  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.bYoCjEX6J.nLTO'
+  '$2b$12$./mzRd9lPwl188CAQ/2rq.nIhaGVrCHghC99AxW41YKl7k/fyuoH.'
 )
 ON CONFLICT (email) DO NOTHING;
 
