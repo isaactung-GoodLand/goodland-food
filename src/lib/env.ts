@@ -5,10 +5,8 @@ const EnvSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
-  // Admin CRM credentials (previously hard-coded; rotated to env vars 2026-07-15
-  // after the 4587c66 incident exposed them in git history)
-  ADMIN_EMAIL: z.string().min(1).default('goodland@goodland-food.com'),
-  ADMIN_PASSWORD: z.string().min(4).default('myLand0933885114'),
+  // Admin CRM credentials — moved to DB (2026-07-15)
+  // ADMIN_EMAIL and ADMIN_PASSWORD removed; auth is now DB-backed
 })
 
 export type Env = z.infer<typeof EnvSchema>
