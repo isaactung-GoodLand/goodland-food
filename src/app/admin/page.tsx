@@ -240,13 +240,8 @@ export default function AdminCRM() {
     }
   };
 
-<<<<<<< Updated upstream
   const openWindow = (url: string, name?: string) => {
     window.open(url, name || 'crm_popup', 'width=900,height=700,left=100,top=100,noopener,noreferrer');
-=======
-  const openWindow = (url: string) => {
-    window.open(url, 'goodland_popup', 'width=700,height=600,left=100,top=100,noopener,noreferrer');
->>>>>>> Stashed changes
   };
 
   // Convert Google Maps URL to embed URL
