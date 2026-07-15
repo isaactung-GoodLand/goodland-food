@@ -351,12 +351,35 @@ export default function AdminCRM() {
                     {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10 flex items-center gap-1.5">
-                    <span>{r.name}</span>
+                    <span className="truncate">{r.name}</span>
                     {isDisabled && (
                       <span className="shrink-0 px-1 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-600" title={r.disabled_reason ? `停用原因：${r.disabled_reason}` : '已停用'}>
                         已停用
                       </span>
                     )}
+                    {/* 聯絡資訊 icons：有資料才顯示，順序：地址 / 電話 / FB / IG / LINE */}
+                    <span className="shrink-0 inline-flex items-center gap-0.5 ml-auto text-[10px] leading-none">
+                      {r.address && (
+                        <span title={`地址：${r.address}`} aria-label="有地址"
+                          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500 text-white font-bold text-[9px]">📍</span>
+                      )}
+                      {r.phone && (
+                        <span title={`電話：${r.phone}`} aria-label="有電話"
+                          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-blue-500 text-white">📞</span>
+                      )}
+                      {r.facebook && (
+                        <span title={`Facebook：${r.facebook}`} aria-label="有 Facebook"
+                          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-indigo-600 text-white font-bold italic">f</span>
+                      )}
+                      {r.instagram && (
+                        <span title={`Instagram：${r.instagram}`} aria-label="有 Instagram"
+                          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 text-white font-bold">i</span>
+                      )}
+                      {r.line && (
+                        <span title={`LINE：${r.line}`} aria-label="有 LINE"
+                          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-green-500 text-white font-bold">L</span>
+                      )}
+                    </span>
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">{r.city}</div>
                   {/* Hover tooltip */}
