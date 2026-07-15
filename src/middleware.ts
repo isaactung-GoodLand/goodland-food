@@ -10,7 +10,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/admin/forgot' ||
     pathname === '/admin/reset' ||
     pathname.startsWith('/admin/api/auth/recover') ||
-    pathname.startsWith('/admin/api/auth/reset')
+    pathname.startsWith('/admin/api/auth/reset') ||
+    pathname.startsWith('/admin/api/auth/forgot')
   ) {
     return NextResponse.next();
   }

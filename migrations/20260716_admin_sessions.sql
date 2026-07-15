@@ -13,8 +13,7 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
 
 -- Fast lookup by session id (index on the primary key column is automatic for TEXT PRIMARY KEY)
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions (user_id);
-CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions (expires_at)
-  WHERE expires_at > NOW();  -- partial index: only active sessions
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions (expires_at);
 
 COMMENT ON TABLE admin_sessions IS 'Login sessions; id is stored in httpOnly cookie';
 
