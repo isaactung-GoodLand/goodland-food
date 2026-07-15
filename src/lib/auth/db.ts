@@ -100,7 +100,7 @@ export async function createRecoveryToken(email: string): Promise<string | null>
   return token; // Return plaintext — caller (or email) sends to user
 }
 
-export async function useRecoveryToken(token: string): Promise<number | null> {
+export async function consumeRecoveryToken(token: string): Promise<number | null> {
   // Find any user with a non-expired token
   const users = await pool.query<AdminUser>(
     `SELECT * FROM admin_users

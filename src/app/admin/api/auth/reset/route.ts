@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { useRecoveryToken, updatePassword } from '@/lib/auth/db';
+import { consumeRecoveryToken, updatePassword } from '@/lib/auth/db';
 
 export async function POST(request: Request) {
   const { token, new_password } = await request.json();
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '新密碼至少 8 個字元' }, { status: 400 });
   }
 
-  const userId = await useRecoveryToken(token);
+  const userId = await consumeRecoveryToken(token);
   if (!userId) {
     return NextResponse.json({ error: '連結無效或已過期，請重新申請' }, { status: 400 });
   }
