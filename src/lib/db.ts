@@ -18,6 +18,11 @@ export interface Restaurant {
   rating: number | null;
   gmaps_url: string;
   has_hongkong_milk_tea: boolean;
+  // 軟刪除欄位
+  disabled_at?: string | null;
+  disabled_reason?: string | null;
+  disabled_by?: string | null;
+  restored_at?: string | null;
 }
 
 export interface ContactLog {

@@ -20,6 +20,11 @@ interface Restaurant {
   last_note?: string;
   last_contact_date?: string;
   contact_logs?: any[];
+  // 軟刪除欄位
+  disabled_at?: string | null;
+  disabled_reason?: string | null;
+  disabled_by?: string | null;
+  restored_at?: string | null;
 }
 
 interface ContactLog {
@@ -37,6 +42,8 @@ export default function AdminCRM() {
   const [cityFilter, setCityFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
+  const [includeDisabled, setIncludeDisabled] = useState(false);
+  const [onlyDisabled, setOnlyDisabled] = useState(false);
   const [filters, setFilters] = useState({ phone: true, facebook: true, instagram: true, line: true, gmaps: true });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -50,6 +57,9 @@ export default function AdminCRM() {
   const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
   const [saving, setSaving] = useState(false);
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
+  const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [editingNote, setEditingNote] = useState('');
+  const [savingLog, setSavingLog] = useState(false);
   const resizerRef = useRef<HTMLDivElement>(null);
   const [rightTopHeight, setRightTopHeight] = useState('20vh');
   const [leftPanelWidth, setLeftPanelWidth] = useState(220);
@@ -69,13 +79,15 @@ export default function AdminCRM() {
     if (!filters.instagram) params.set('has_instagram', 'true');
     if (!filters.line) params.set('has_line', 'true');
     if (!filters.gmaps) params.set('has_gmaps', 'true');
+    if (includeDisabled) params.set('include_disabled', 'true');
+    if (onlyDisabled) params.set('only_disabled', 'true');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page]);
+  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page, includeDisabled, onlyDisabled]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
@@ -114,11 +126,60 @@ export default function AdminCRM() {
 
   const handleDelete = async () => {
     if (!selected) return;
-    if (!confirm(`確定要刪除「${selected.name}」嗎？此操作不可逆。`)) return;
-    const res = await fetch(`/admin/api/restaurants/${selected.id}`, { method: 'DELETE' });
+    const reason = prompt(`停用「${selected.name}」的原因（可留空）：`) ?? '';
+    if (reason === null) return; // 使用者按取消
+    if (!confirm(`確定要停用「${selected.name}」嗎？此操作可在「垃圾桶」中復原。`)) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, by: 'admin' }),
+    });
     if (res.ok) {
       setSelected(null);
       fetchRestaurants();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`停用失敗：${data.error || res.statusText}`);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!selected) return;
+    if (!confirm(`確定要恢復「${selected.name}」嗎？`)) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}/restore`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      // 重新抓取詳細資料
+      const detail = await fetch(`/admin/api/restaurants/${selected.id}`).then(r => r.json());
+      setSelected(detail);
+      setEditForm(detail);
+      fetchRestaurants();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`恢復失敗：${data.error || res.statusText}`);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (!selected) return;
+    const typed = prompt(
+      `⚠️ 永久刪除「${selected.name}」將無法復原，聯絡紀錄也會一併刪除。\n\n請輸入 PURGE 確認：`
+    );
+    if (typed !== 'PURGE') {
+      if (typed !== null) alert('輸入不正確，已取消。');
+      return;
+    }
+    const res = await fetch(`/admin/api/restaurants/${selected.id}/purge`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'PURGE' }),
+    });
+    if (res.ok) {
+      setSelected(null);
+      fetchRestaurants();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`永久刪除失敗：${data.error || res.statusText}`);
     }
   };
 
@@ -136,6 +197,47 @@ export default function AdminCRM() {
       setNewNote('');
     }
     setAddingNote(false);
+  };
+
+  const startEditLog = (log: ContactLog) => {
+    setEditingLogId(log.id);
+    setEditingNote(log.notes || '');
+  };
+
+  const cancelEditLog = () => {
+    setEditingLogId(null);
+    setEditingNote('');
+  };
+
+  const saveEditLog = async () => {
+    if (editingLogId == null) return;
+    setSavingLog(true);
+    const res = await fetch(`/admin/api/contact-logs/${editingLogId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: editingNote }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setContactLogs(prev => prev.map(l => (l.id === updated.id ? updated : l)));
+      cancelEditLog();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`編輯失敗：${data.error || res.statusText}`);
+    }
+    setSavingLog(false);
+  };
+
+  const deleteLog = async (log: ContactLog) => {
+    if (!confirm(`確定刪除這筆紀錄？\n類型：${typeLabel[log.contact_type] || log.contact_type}\n備註：${log.notes || '(無)'}\n\n此操作無法復原。`)) return;
+    const res = await fetch(`/admin/api/contact-logs/${log.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setContactLogs(prev => prev.filter(l => l.id !== log.id));
+      if (editingLogId === log.id) cancelEditLog();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`刪除失敗：${data.error || res.statusText}`);
+    }
   };
 
   const openWindow = (url: string) => {
@@ -224,6 +326,8 @@ export default function AdminCRM() {
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.gmaps} onChange={e => { setFilters(f => ({ ...f, gmaps: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-gray-500" />📍</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={uncontactedOnly} onChange={e => { setUncontactedOnly(e.target.checked); setPage(1); }} className="w-3 h-3 rounded accent-red-500" />❌</label>
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={hasMilkTeaOnly} onChange={e => { setHasMilkTeaOnly(e.target.checked); setPage(1); }} className="w-3 h-3 rounded accent-green-500" />🧋</label>
+            <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer" title="包含已停用的店家"><input type="checkbox" checked={includeDisabled} onChange={e => { setIncludeDisabled(e.target.checked); if (e.target.checked) setOnlyDisabled(false); setPage(1); }} className="w-3 h-3 rounded accent-gray-400" />🪦 含已停用</label>
+            <label className="flex items-center gap-1 text-xs text-red-600 cursor-pointer font-medium" title="只看已停用的店家（垃圾桶）"><input type="checkbox" checked={onlyDisabled} onChange={e => { setOnlyDisabled(e.target.checked); if (e.target.checked) setIncludeDisabled(false); setPage(1); }} className="w-3 h-3 rounded accent-red-500" />🗑 垃圾桶</label>
           </div>
           <div className="text-xs text-gray-400">{total} 間</div>
         </div>
@@ -235,17 +339,25 @@ export default function AdminCRM() {
           ) : (
             restaurants.map(r => {
               const lastLog = getLastLog(r);
+              const isDisabled = r.disabled_at != null;
               return (
                 <div key={r.id}
                   onClick={() => selectRestaurant(r)}
-                  className={`px-3 py-2 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition relative group ${selected?.id === r.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                  className={`px-3 py-2 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition relative group ${selected?.id === r.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''} ${isDisabled ? 'opacity-60 bg-gray-50' : ''}`}
                 >
                   {/* Indicators */}
                   <span className="absolute top-2 right-2 flex gap-0.5">
                     {r.has_notes && <span title={r.last_note || '有備註'} className="w-2 h-2 rounded-full bg-red-500 shrink-0" />}
                     {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                   </span>
-                  <div className="font-medium text-xs text-gray-800 truncate pr-10">{r.name}</div>
+                  <div className="font-medium text-xs text-gray-800 truncate pr-10 flex items-center gap-1.5">
+                    <span>{r.name}</span>
+                    {isDisabled && (
+                      <span className="shrink-0 px-1 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-600" title={r.disabled_reason ? `停用原因：${r.disabled_reason}` : '已停用'}>
+                        已停用
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-400 mt-0.5">{r.city}</div>
                   {/* Hover tooltip */}
                   {r.last_note && (
@@ -285,13 +397,34 @@ export default function AdminCRM() {
 
             {/* Restaurant info + action buttons */}
             <div className="p-4 border-b border-gray-200 bg-white">
+              {/* 停用資訊列（只在已停用時顯示） */}
+              {selected.disabled_at && (
+                <div className="mb-3 p-2 bg-gray-100 border border-gray-300 rounded text-xs text-gray-700 flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">🪦</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-800">此店家已停用</div>
+                    <div className="text-gray-500 mt-0.5">
+                      停用時間：{new Date(selected.disabled_at).toLocaleString('zh-TW')}
+                      {selected.disabled_by && ` · 執行：${selected.disabled_by}`}
+                      {selected.disabled_reason && ` · 原因：${selected.disabled_reason}`}
+                    </div>
+                    {selected.restored_at && (
+                      <div className="text-gray-500 mt-0.5">
+                        最後恢復：{new Date(selected.restored_at).toLocaleString('zh-TW')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg font-bold text-gray-800 truncate">{selected.name}</h2>
                     {!editing ? (
                       <button onClick={() => setEditing(true)}
-                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 shrink-0">
+                        disabled={!!selected.disabled_at}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={selected.disabled_at ? '已停用，請先恢復' : '編輯'}>
                         ✏️
                       </button>
                     ) : (
@@ -302,9 +435,26 @@ export default function AdminCRM() {
                         </button>
                         <button onClick={() => { setEditing(false); setEditForm(selected); }}
                           className="px-3 py-1 bg-gray-400 text-white text-xs rounded-lg hover:bg-gray-500">✖</button>
-                        <button onClick={handleDelete}
-                          className="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">🗑</button>
                       </div>
+                    )}
+                    {/* 停用/啟用 + 永久刪除按鈕（已停用店家優先顯示恢復） */}
+                    {selected.disabled_at ? (
+                      <>
+                        <button onClick={handleRestore}
+                          className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 shrink-0">
+                          ♻️ 啟用
+                        </button>
+                        <button onClick={handlePurge}
+                          className="px-3 py-1 bg-red-700 text-white text-xs rounded-lg hover:bg-red-800 shrink-0">
+                          ⚠ 永久刪除
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={handleDelete}
+                        className="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 shrink-0"
+                        title="停用（可在垃圾桶復原）">
+                        🗑 停用
+                      </button>
                     )}
                   </div>
                   {!editing && (
@@ -388,24 +538,71 @@ export default function AdminCRM() {
                     {contactLogs.length === 0 ? (
                       <div className="text-xs text-gray-400 flex items-center h-full">尚無紀錄</div>
                     ) : (
-                      contactLogs.map((log, idx) => (
-                        <div key={log.id}
-                          onMouseEnter={e => {
-                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                            setHoveredLog({ log, x: rect.left, y: rect.bottom + 4 });
-                          }}
-                          onMouseLeave={() => setHoveredLog(null)}
-                          className={`relative shrink-0 w-[80px] p-1.5 rounded-lg border cursor-default text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
-                        >
-                          <div className={`inline-block px-1 py-0.5 rounded text-[9px] font-medium ${typeColor[log.contact_type] || 'bg-gray-100'}`}>
-                            {typeLabel[log.contact_type] || log.contact_type}
+                      contactLogs.map((log, idx) => {
+                        const isEditing = editingLogId === log.id;
+                        const canModify = !selected?.disabled_at;
+                        return (
+                          <div key={log.id}
+                            onMouseEnter={e => {
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setHoveredLog({ log, x: rect.left, y: rect.bottom + 4 });
+                            }}
+                            onMouseLeave={() => setHoveredLog(null)}
+                            className={`relative group/log shrink-0 w-[140px] p-1.5 rounded-lg border text-xs ${idx === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}
+                          >
+                            {/* hover 工具列：✏️ 編輯 + × 刪除（disabled 店家時隱藏） */}
+                            {canModify && !isEditing && (
+                              <div className="absolute -top-1 -right-1 hidden group-hover/log:flex gap-0.5 z-10">
+                                <button
+                                  onClick={e => { e.stopPropagation(); startEditLog(log); }}
+                                  className="w-5 h-5 rounded-full bg-white border border-gray-300 shadow text-[10px] hover:bg-blue-100"
+                                  title="編輯備註"
+                                >✏️</button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); deleteLog(log); }}
+                                  className="w-5 h-5 rounded-full bg-white border border-gray-300 shadow text-[10px] hover:bg-red-100"
+                                  title="刪除這筆紀錄"
+                                >×</button>
+                              </div>
+                            )}
+                            <div className={`inline-block px-1 py-0.5 rounded text-[9px] font-medium ${typeColor[log.contact_type] || 'bg-gray-100'}`}>
+                              {typeLabel[log.contact_type] || log.contact_type}
+                            </div>
+                            <div className="text-[9px] text-gray-400 mt-0.5">
+                              {new Date(log.contact_date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
+                            </div>
+                            {isEditing ? (
+                              <div className="mt-1">
+                                <textarea
+                                  value={editingNote}
+                                  onChange={e => setEditingNote(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveEditLog();
+                                    if (e.key === 'Escape') cancelEditLog();
+                                  }}
+                                  autoFocus
+                                  rows={2}
+                                  maxLength={2000}
+                                  className="w-full text-[10px] p-1 border border-blue-400 rounded outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                                />
+                                <div className="flex gap-1 mt-1">
+                                  <button onClick={saveEditLog} disabled={savingLog}
+                                    className="flex-1 px-1 py-0.5 bg-blue-600 text-white text-[9px] rounded hover:bg-blue-700 disabled:opacity-50">
+                                    {savingLog ? '...' : '儲存'}
+                                  </button>
+                                  <button onClick={cancelEditLog}
+                                    className="flex-1 px-1 py-0.5 bg-gray-300 text-gray-700 text-[9px] rounded hover:bg-gray-400">
+                                    取消
+                                  </button>
+                                </div>
+                                <div className="text-[8px] text-gray-400 mt-0.5">⌘/Ctrl+Enter 儲存 · Esc 取消</div>
+                              </div>
+                            ) : (
+                              log.notes && <div className="text-[9px] text-gray-600 mt-0.5 break-words line-clamp-2">{log.notes}</div>
+                            )}
                           </div>
-                          <div className="text-[9px] text-gray-400 mt-0.5">
-                            {new Date(log.contact_date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
-                          </div>
-                          {log.notes && <div className="text-[9px] text-gray-600 mt-0.5 truncate">{log.notes}</div>}
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>

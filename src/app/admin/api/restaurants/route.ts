@@ -12,12 +12,24 @@ export async function GET(request: Request) {
   const hasLine = searchParams.get('has_line') === 'true';
   const hasGmaps = searchParams.get('has_gmaps') === 'true';
   const page = parseInt(searchParams.get('page') || '1');
+  // 軟刪除過濾：
+  //   - 預設只顯示啟用中的店家（disabled_at IS NULL）
+  //   - include_disabled=true：啟用 + 停用 全部顯示
+  //   - only_disabled=true：只顯示停用中的店家（垃圾桶 view）
+  const includeDisabled = searchParams.get('include_disabled') === 'true';
+  const onlyDisabled = searchParams.get('only_disabled') === 'true';
   const limit = 20;
   const offset = (page - 1) * limit;
 
   let where = 'WHERE 1=1';
   if (q) where += ` AND (name ILIKE $${1} OR address ILIKE $${1})`;
   if (city) where += ` AND city = $2`;
+
+  if (onlyDisabled) {
+    where += ` AND disabled_at IS NOT NULL`;
+  } else if (!includeDisabled) {
+    where += ` AND disabled_at IS NULL`;
+  }
 
   // OR filters: show shops that HAVE at least one of the missing contact info
   const orConditions: string[] = [];
@@ -53,6 +65,7 @@ export async function GET(request: Request) {
            facebook, instagram, line, gmaps_url,
            has_hongkong_milk_tea, rating,
            created_at,
+           disabled_at, disabled_reason, disabled_by, restored_at,
            (SELECT notes FROM contact_logs WHERE restaurant_id = restaurants.id ORDER BY created_at DESC LIMIT 1) AS last_note
     FROM restaurants
     ${where}
