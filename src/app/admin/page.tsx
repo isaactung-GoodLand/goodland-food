@@ -139,7 +139,14 @@ export default function AdminCRM() {
       body: JSON.stringify({ reason, by: 'admin' }),
     });
     if (res.ok) {
-      setSelected(null);
+      // 停用後:左邊列表保留選中 + 上方「含已停用」自動 checked
+      // (預設只顯示啟用中的店家,停用後會從當前視圖消失 → 自動切到含已停用 view)
+      setIncludeDisabled(true);
+      setOnlyDisabled(false);
+      setPage(1);
+      // 重新抓取詳細資料,讓 selected 反映新的 disabled_at
+      const detail = await fetch(`/admin/api/restaurants/${selected.id}?allow_disabled=true`).then(r => r.json());
+      setSelected(detail);
       fetchRestaurants();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -383,21 +390,20 @@ export default function AdminCRM() {
                     {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10 flex items-center gap-1.5">
-                    {/* 優先度徽章:1-5 顯示圈數字,NULL 不顯示(避免干擾掃讀) */}
-                    {typeof r.priority === 'number' && r.priority >= 1 && r.priority <= 5 && (
-                      <span
-                        className={`shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold leading-none ${
-                          r.priority <= 2
-                            ? 'bg-red-100 text-red-700'
-                            : r.priority <= 3
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-gray-100 text-gray-500'
-                        }`}
-                        title={`優先度 ${r.priority} (1=最高)`}
-                      >
-                        {circledNum(r.priority)}
-                      </span>
-                    )}
+                    {/* 優先度徽章:1-5 顯示圈數字,NULL 也預設顯示為 ③(default=3 的視覺錨點) */}
+                    {(() => {
+                      const p = r.priority ?? 3;
+                      return (
+                        <span
+                          className={`shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold leading-none ${
+                            p <= 2 ? 'bg-red-100 text-red-700' : p <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                          }`}
+                          title={r.priority == null ? 'priority 未設定 (顯示預設 ③)' : `優先度 ${p} (1=最高)`}
+                        >
+                          {circledNum(p)}
+                        </span>
+                      );
+                    })()}
                     <span className="truncate">{r.name}</span>
                     {isDisabled && (
                       <span className="shrink-0 px-1 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-600" title={r.disabled_reason ? `停用原因：${r.disabled_reason}` : '已停用'}>
@@ -536,33 +542,37 @@ export default function AdminCRM() {
                       <input value={editForm.facebook || ''} onChange={e => setEditForm(p => ({ ...p, facebook: e.target.value }))} placeholder="Facebook" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.instagram || ''} onChange={e => setEditForm(p => ({ ...p, instagram: e.target.value }))} placeholder="Instagram" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.line || ''} onChange={e => setEditForm(p => ({ ...p, line: e.target.value }))} placeholder="LINE" className="px-2 py-1 border rounded text-sm" />
-                      {/* priority 編輯:select 比 input 更明確邊界,且用「清除」按鈕送 null */}
+                      {/* priority 編輯:radio box 全展開,default = 3(NULL 在 UI 顯示為 ③)*/}
                       <div className="col-span-2 flex items-center gap-2">
-                        <select
-                          value={editForm.priority ?? ''}
-                          onChange={e => {
-                            const v = e.target.value;
-                            setEditForm(p => ({ ...p, priority: v === '' ? null : Number(v) }));
-                          }}
-                          className="px-2 py-1 border rounded text-sm flex-1"
-                        >
-                          <option value="">未設定 priority</option>
-                          <option value="1">① 最高 (1)</option>
-                          <option value="2">② (2)</option>
-                          <option value="3">③ (3)</option>
-                          <option value="4">④ (4)</option>
-                          <option value="5">⑤ 最低 (5)</option>
-                        </select>
-                        {editForm.priority != null && (
-                          <button
-                            type="button"
-                            onClick={() => setEditForm(p => ({ ...p, priority: null }))}
-                            className="px-2 py-1 text-xs text-gray-500 hover:text-red-600 border border-gray-300 rounded"
-                            title="清除 priority"
-                          >
-                            清除
-                          </button>
-                        )}
+                        <span className="text-xs text-gray-500 shrink-0">priority:</span>
+                        {[1, 2, 3, 4, 5].map(n => {
+                          // NULL 在 UI 預設顯示為 3,但未儲存前不在 radio 上(用「未設」option 處理)
+                          const current = editForm.priority ?? 3;
+                          return (
+                            <label key={n} className="flex items-center gap-1 text-xs cursor-pointer px-1.5 py-0.5 rounded hover:bg-gray-100">
+                              <input
+                                type="radio"
+                                name="priority"
+                                value={n}
+                                checked={current === n}
+                                onChange={() => setEditForm(p => ({ ...p, priority: n }))}
+                                className="w-3 h-3 accent-amber-600"
+                              />
+                              <span>{'①②③④⑤'[n-1]}</span>
+                            </label>
+                          );
+                        })}
+                        <label className="flex items-center gap-1 text-xs cursor-pointer px-1.5 py-0.5 rounded hover:bg-gray-100 text-gray-400">
+                          <input
+                            type="radio"
+                            name="priority"
+                            value=""
+                            checked={editForm.priority === null}
+                            onChange={() => setEditForm(p => ({ ...p, priority: null }))}
+                            className="w-3 h-3"
+                          />
+                          <span>未設</span>
+                        </label>
                       </div>
                     </div>
                   )}
