@@ -18,11 +18,12 @@ describe('getEnv', () => {
     expect(() => getEnv()).toThrow(/DATABASE_URL/)
   })
 
-  it('throws when UPSTASH_REDIS_REST_TOKEN is missing', async () => {
+  it('does not throw when UPSTASH_REDIS_REST_TOKEN is missing (Redis is optional)', async () => {
     process.env.DATABASE_URL = 'postgresql://x/y'
     process.env.UPSTASH_REDIS_REST_URL = 'https://x.io'
+    // UPSTASH_REDIS_REST_TOKEN intentionally omitted — it is optional
     const { getEnv } = await import('../src/lib/env')
-    expect(() => getEnv()).toThrow(/UPSTASH_REDIS_REST_TOKEN/)
+    expect(() => getEnv()).not.toThrow()
   })
 
   it('parses DATABASE_URL when all required present', async () => {
