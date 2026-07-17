@@ -20,6 +20,7 @@ interface Restaurant {
   last_note?: string;
   last_contact_date?: string;
   contact_logs?: any[];
+  priority?: number | null;
   // 軟刪除欄位
   disabled_at?: string | null;
   disabled_reason?: string | null;
@@ -44,6 +45,8 @@ export default function AdminCRM() {
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
   const [includeDisabled, setIncludeDisabled] = useState(false);
   const [onlyDisabled, setOnlyDisabled] = useState(false);
+  // sort: 'name' (預設 A→Z) | 'priority' (1 在前, NULL 最後)
+  const [sort, setSort] = useState<'name' | 'priority'>('name');
   const [filters, setFilters] = useState({ phone: true, facebook: true, instagram: true, line: true, gmaps: true });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -81,13 +84,14 @@ export default function AdminCRM() {
     if (!filters.gmaps) params.set('has_gmaps', 'true');
     if (includeDisabled) params.set('include_disabled', 'true');
     if (onlyDisabled) params.set('only_disabled', 'true');
+    if (sort === 'priority') params.set('sort', 'priority');
     params.set('page', String(page));
     const res = await fetch(`/admin/api/restaurants?${params}`);
     const data = await res.json();
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page, includeDisabled, onlyDisabled]);
+  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page, includeDisabled, onlyDisabled, sort]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
@@ -269,6 +273,12 @@ export default function AdminCRM() {
   const typeLabel: Record<string, string> = { phone: '📞 電話', facebook: '💬 Facebook', instagram: '📸 Instagram', line: '💚 LINE', walkin: '🚶 親訪', other: '📝 其他' };
   const typeColor: Record<string, string> = { phone: 'bg-blue-100 text-blue-800', facebook: 'bg-indigo-100 text-indigo-800', instagram: 'bg-pink-100 text-pink-800', line: 'bg-green-100 text-green-800', walkin: 'bg-amber-100 text-amber-800', other: 'bg-gray-100 text-gray-800' };
 
+  // 數字徽章 ①②③④⑤⑥⑦⑧⑨⑩ → 11+ 退回 [N] 風格避免 Unicode 缺字
+  const circledNum = (n: number): string => {
+    if (n >= 1 && n <= 10) return String.fromCodePoint(0x245F + n); // ①..⑩
+    return `[${n}]`;
+  };
+
   // Resizer drag
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -329,7 +339,20 @@ export default function AdminCRM() {
             <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer" title="包含已停用的店家"><input type="checkbox" checked={includeDisabled} onChange={e => { setIncludeDisabled(e.target.checked); if (e.target.checked) setOnlyDisabled(false); setPage(1); }} className="w-3 h-3 rounded accent-gray-400" />🪦 含已停用</label>
             <label className="flex items-center gap-1 text-xs text-red-600 cursor-pointer font-medium" title="只看已停用的店家（垃圾桶）"><input type="checkbox" checked={onlyDisabled} onChange={e => { setOnlyDisabled(e.target.checked); if (e.target.checked) setIncludeDisabled(false); setPage(1); }} className="w-3 h-3 rounded accent-red-500" />🗑 垃圾桶</label>
           </div>
-          <div className="text-xs text-gray-400">{total} 間</div>
+          <div className="text-xs text-gray-400 flex items-center justify-between gap-2">
+            <span>{total} 間</span>
+            <button
+              onClick={() => { setSort(s => s === 'name' ? 'priority' : 'name'); setPage(1); }}
+              title={sort === 'name' ? '切換成 priority 排序' : '切換成店名排序'}
+              className={`px-2 py-0.5 rounded text-[10px] font-medium border transition ${
+                sort === 'priority'
+                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+              }`}
+            >
+              排序: {sort === 'name' ? '店名' : 'priority'}
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -351,6 +374,21 @@ export default function AdminCRM() {
                     {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10 flex items-center gap-1.5">
+                    {/* 優先度徽章:1-5 顯示圈數字,NULL 不顯示(避免干擾掃讀) */}
+                    {typeof r.priority === 'number' && r.priority >= 1 && r.priority <= 5 && (
+                      <span
+                        className={`shrink-0 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold leading-none ${
+                          r.priority <= 2
+                            ? 'bg-red-100 text-red-700'
+                            : r.priority <= 3
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-gray-100 text-gray-500'
+                        }`}
+                        title={`優先度 ${r.priority} (1=最高)`}
+                      >
+                        {circledNum(r.priority)}
+                      </span>
+                    )}
                     <span className="truncate">{r.name}</span>
                     {isDisabled && (
                       <span className="shrink-0 px-1 py-0.5 rounded text-[9px] font-medium bg-gray-200 text-gray-600" title={r.disabled_reason ? `停用原因：${r.disabled_reason}` : '已停用'}>
@@ -489,6 +527,34 @@ export default function AdminCRM() {
                       <input value={editForm.facebook || ''} onChange={e => setEditForm(p => ({ ...p, facebook: e.target.value }))} placeholder="Facebook" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.instagram || ''} onChange={e => setEditForm(p => ({ ...p, instagram: e.target.value }))} placeholder="Instagram" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.line || ''} onChange={e => setEditForm(p => ({ ...p, line: e.target.value }))} placeholder="LINE" className="px-2 py-1 border rounded text-sm" />
+                      {/* priority 編輯:select 比 input 更明確邊界,且用「清除」按鈕送 null */}
+                      <div className="col-span-2 flex items-center gap-2">
+                        <select
+                          value={editForm.priority ?? ''}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setEditForm(p => ({ ...p, priority: v === '' ? null : Number(v) }));
+                          }}
+                          className="px-2 py-1 border rounded text-sm flex-1"
+                        >
+                          <option value="">未設定 priority</option>
+                          <option value="1">① 最高 (1)</option>
+                          <option value="2">② (2)</option>
+                          <option value="3">③ (3)</option>
+                          <option value="4">④ (4)</option>
+                          <option value="5">⑤ 最低 (5)</option>
+                        </select>
+                        {editForm.priority != null && (
+                          <button
+                            type="button"
+                            onClick={() => setEditForm(p => ({ ...p, priority: null }))}
+                            className="px-2 py-1 text-xs text-gray-500 hover:text-red-600 border border-gray-300 rounded"
+                            title="清除 priority"
+                          >
+                            清除
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

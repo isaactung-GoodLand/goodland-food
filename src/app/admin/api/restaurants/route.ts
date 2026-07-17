@@ -18,6 +18,8 @@ export async function GET(request: Request) {
   //   - only_disabled=true：只顯示停用中的店家（垃圾桶 view）
   const includeDisabled = searchParams.get('include_disabled') === 'true';
   const onlyDisabled = searchParams.get('only_disabled') === 'true';
+  // sort 切換:'name' (預設, A→Z) | 'priority' (1 在前, NULL 最後)
+  const sort = searchParams.get('sort') === 'priority' ? 'priority' : 'name';
   const limit = 20;
   const offset = (page - 1) * limit;
 
@@ -60,16 +62,21 @@ export async function GET(request: Request) {
 
   // Data
   values.push(limit, offset);
+  // 排序:priority 模式 NULLS LAST,然後用 id ASC tie-breaker 避免分頁跳動
+  const orderBy = sort === 'priority'
+    ? 'priority ASC NULLS LAST, id ASC'
+    : 'name ASC';
   const result = await pool.query(`
     SELECT id, name, city, district, address, phone,
            facebook, instagram, line, gmaps_url,
            has_hongkong_milk_tea, rating,
+           priority,
            created_at,
            disabled_at, disabled_reason, disabled_by, restored_at,
            (SELECT notes FROM contact_logs WHERE restaurant_id = restaurants.id ORDER BY created_at DESC LIMIT 1) AS last_note
     FROM restaurants
     ${where}
-    ORDER BY name ASC
+    ORDER BY ${orderBy}
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `, values);
 
