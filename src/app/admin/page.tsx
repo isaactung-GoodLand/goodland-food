@@ -43,7 +43,8 @@ export default function AdminCRM() {
   const [cityFilter, setCityFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
-  const [includeDisabled, setIncludeDisabled] = useState(false);
+  // 預設包含已停用
+  const [includeDisabled, setIncludeDisabled] = useState(true);
   const [onlyDisabled, setOnlyDisabled] = useState(false);
   // sort: 'name' (預設 A→Z) | 'priority' (1 在前, NULL 最後)
   const [sort, setSort] = useState<'name' | 'priority'>('name');
@@ -128,6 +129,26 @@ export default function AdminCRM() {
     setSaving(false);
   };
 
+  const quickSetPriority = async (n: number) => {
+    if (!selected) return;
+    if (selected.priority === n) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: n }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setSelected(updated);
+      setRestaurants(prev =>
+        prev.map(r => r.id === updated.id ? { ...r, priority: updated.priority } : r)
+      );
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`更新 priority 失敗：${data.error || res.statusText}`);
+    }
+  };
+
   const handleDelete = async () => {
     if (!selected) return;
     const reason = prompt(`停用「${selected.name}」的原因（可留空）：`) ?? '';
@@ -139,9 +160,6 @@ export default function AdminCRM() {
       body: JSON.stringify({ reason, by: 'admin' }),
     });
     if (res.ok) {
-      // 停用後:左邊列表保留選中 + 上方「含已停用」自動 checked
-      // (預設只顯示啟用中的店家,停用後會從當前視圖消失 → 自動切到含已停用 view)
-      setIncludeDisabled(true);
       setOnlyDisabled(false);
       setPage(1);
       // 重新抓取詳細資料,讓 selected 反映新的 disabled_at
@@ -532,6 +550,29 @@ export default function AdminCRM() {
                         🗑 停用
                       </button>
                     )}
+
+                    {/* priority radio: 點了直接 PUT 寫 DB 不 reload。NULL 預設顯示為 ③,所有店家 default=3。 */}
+                    <div className="flex items-center gap-1 shrink-0 pl-2 border-l border-gray-300 ml-1">
+                      <span className="text-[10px] text-gray-500">priority</span>
+                      {[1, 2, 3, 4, 5].map(n => {
+                        const current = selected.priority ?? 3;
+                        const colorClass = n <= 2 ? 'accent-red-600' : n === 3 ? 'accent-amber-600' : 'accent-gray-400';
+                        return (
+                          <label key={n} className="flex items-center gap-0.5 text-xs cursor-pointer px-1 py-0.5 rounded hover:bg-gray-100">
+                            <input
+                              type="radio"
+                              name={`priority-${selected.id}`}
+                              value={n}
+                              checked={current === n}
+                              onChange={() => quickSetPriority(n)}
+                              className={`w-3 h-3 ${colorClass}`}
+                              title={`設為 ${n}`}
+                            />
+                            <span>{'①②③④⑤'[n-1]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
                   {!editing && (
                     <div className="mt-1 text-sm text-gray-700 break-all leading-relaxed">{selected.address}</div>
@@ -542,38 +583,6 @@ export default function AdminCRM() {
                       <input value={editForm.facebook || ''} onChange={e => setEditForm(p => ({ ...p, facebook: e.target.value }))} placeholder="Facebook" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.instagram || ''} onChange={e => setEditForm(p => ({ ...p, instagram: e.target.value }))} placeholder="Instagram" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.line || ''} onChange={e => setEditForm(p => ({ ...p, line: e.target.value }))} placeholder="LINE" className="px-2 py-1 border rounded text-sm" />
-                      {/* priority 編輯:radio box 全展開,default = 3(NULL 在 UI 顯示為 ③)*/}
-                      <div className="col-span-2 flex items-center gap-2">
-                        <span className="text-xs text-gray-500 shrink-0">priority:</span>
-                        {[1, 2, 3, 4, 5].map(n => {
-                          // NULL 在 UI 預設顯示為 3,但未儲存前不在 radio 上(用「未設」option 處理)
-                          const current = editForm.priority ?? 3;
-                          return (
-                            <label key={n} className="flex items-center gap-1 text-xs cursor-pointer px-1.5 py-0.5 rounded hover:bg-gray-100">
-                              <input
-                                type="radio"
-                                name="priority"
-                                value={n}
-                                checked={current === n}
-                                onChange={() => setEditForm(p => ({ ...p, priority: n }))}
-                                className="w-3 h-3 accent-amber-600"
-                              />
-                              <span>{'①②③④⑤'[n-1]}</span>
-                            </label>
-                          );
-                        })}
-                        <label className="flex items-center gap-1 text-xs cursor-pointer px-1.5 py-0.5 rounded hover:bg-gray-100 text-gray-400">
-                          <input
-                            type="radio"
-                            name="priority"
-                            value=""
-                            checked={editForm.priority === null}
-                            onChange={() => setEditForm(p => ({ ...p, priority: null }))}
-                            className="w-3 h-3"
-                          />
-                          <span>未設</span>
-                        </label>
-                      </div>
                     </div>
                   )}
                 </div>
