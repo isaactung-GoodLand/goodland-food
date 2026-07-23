@@ -6,7 +6,7 @@ const BCRYPT_ROUNDS = 12;
 export interface AdminUser {
   id: number;
   email: string;
-  password: string;
+  password_hash: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -19,11 +19,11 @@ export async function verifyAdminCredentials(
   const result = await pool.connect();
   try {
     const { rows } = await result.query<AdminUser>(
-      'SELECT id, email, password, created_at, updated_at FROM admin_users WHERE email = $1',
+      'SELECT id, email, password_hash, created_at, updated_at FROM admin_users WHERE email = $1',
       [email]
     );
     if (!rows[0]) return null;
-    const valid = await bcrypt.compare(plainPassword, rows[0].password);
+    const valid = await bcrypt.compare(plainPassword, rows[0].password_hash);
     return valid ? rows[0] : null;
   } finally {
     result.release();
@@ -44,7 +44,7 @@ export async function updateAdminPassword(
   const result = await pool.connect();
   try {
     await result.query(
-      'UPDATE admin_users SET password = $1, updated_at = NOW() WHERE email = $2',
+      'UPDATE admin_users SET password_hash = $1, updated_at = NOW() WHERE email = $2',
       [hash, email]
     );
   } finally {
