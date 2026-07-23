@@ -27,8 +27,8 @@ export async function POST() {
     `);
 
     return NextResponse.json({ ok: true, message: 'admin_users table ready' });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   } finally {
     client.release();
   }
