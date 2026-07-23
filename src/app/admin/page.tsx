@@ -36,6 +36,80 @@ interface ContactLog {
   created_at: string;
 }
 
+function InlineEditableField({
+  value, onSave, disabled, disabledTooltip,
+  className, inputClassName, placeholder = '',
+}: {
+  value: string;
+  onSave: (newValue: string) => Promise<void>;
+  disabled?: boolean;
+  disabledTooltip?: string;
+  className?: string;
+  inputClassName?: string;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (!editing) setDraft(value); }, [value, editing]);
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commit = async () => {
+    const trimmed = draft.trim();
+    if (trimmed === value || trimmed === '') {
+      setEditing(false);
+      setDraft(value);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(trimmed);
+      setEditing(false);
+    } catch {
+      setDraft(value);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+          if (e.key === 'Escape') { e.preventDefault(); setDraft(value); setEditing(false); }
+        }}
+        placeholder={placeholder}
+        className={inputClassName}
+        disabled={saving}
+      />
+    );
+  }
+
+  return (
+    <span
+      onClick={() => { if (!disabled) setEditing(true); }}
+      className={className}
+      title={disabled ? disabledTooltip : '點擊修改'}
+      style={{ cursor: disabled ? 'not-allowed' : 'text' }}
+    >
+      {value || <span className="text-gray-400 italic">(未填)</span>}
+    </span>
+  );
+}
+
 export default function AdminCRM() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selected, setSelected] = useState<Restaurant | null>(null);
@@ -111,6 +185,40 @@ export default function AdminCRM() {
     setContactLogs(data.contact_logs || []);
   };
 
+  const saveNameInline = async (newName: string) => {
+    if (!selected) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(`更新店名失敗：${data.error || res.statusText}`);
+      throw new Error('save failed');
+    }
+    const updated = await res.json();
+    setSelected(updated);
+    setRestaurants(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r));
+  };
+
+  const saveAddressInline = async (newAddress: string) => {
+    if (!selected) return;
+    const res = await fetch(`/admin/api/restaurants/${selected.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: newAddress }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(`更新地址失敗：${data.error || res.statusText}`);
+      throw new Error('save failed');
+    }
+    const updated = await res.json();
+    setSelected(updated);
+    setRestaurants(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r));
+  };
+
   const saveEdit = async () => {
     if (!selected) return;
     setSaving(true);
@@ -124,7 +232,7 @@ export default function AdminCRM() {
       setSelected(updated);
       setEditForm(updated);
       setEditing(false);
-      fetchRestaurants();
+      setRestaurants(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r));
     }
     setSaving(false);
   };
@@ -160,12 +268,16 @@ export default function AdminCRM() {
       body: JSON.stringify({ reason, by: 'admin' }),
     });
     if (res.ok) {
-      setOnlyDisabled(false);
-      setPage(1);
+      const data = await res.json();
       // 重新抓取詳細資料,讓 selected 反映新的 disabled_at
       const detail = await fetch(`/admin/api/restaurants/${selected.id}?allow_disabled=true`).then(r => r.json());
       setSelected(detail);
-      fetchRestaurants();
+      
+      if (includeDisabled) {
+        setRestaurants(prev => prev.map(r => r.id === selected.id ? { ...r, disabled_at: data.restaurant?.disabled_at || new Date().toISOString() } : r));
+      } else {
+        setRestaurants(prev => prev.filter(r => r.id !== selected.id));
+      }
     } else {
       const data = await res.json().catch(() => ({}));
       alert(`停用失敗：${data.error || res.statusText}`);
@@ -182,7 +294,12 @@ export default function AdminCRM() {
       const detail = await fetch(`/admin/api/restaurants/${selected.id}`).then(r => r.json());
       setSelected(detail);
       setEditForm(detail);
-      fetchRestaurants();
+      
+      if (onlyDisabled) {
+        setRestaurants(prev => prev.filter(r => r.id !== detail.id));
+      } else {
+        setRestaurants(prev => prev.map(r => r.id === detail.id ? { ...r, ...detail, disabled_at: null } : r));
+      }
     } else {
       const data = await res.json().catch(() => ({}));
       alert(`恢復失敗：${data.error || res.statusText}`);
@@ -204,8 +321,8 @@ export default function AdminCRM() {
       body: JSON.stringify({ confirm: 'PURGE' }),
     });
     if (res.ok) {
+      setRestaurants(prev => prev.filter(r => r.id !== selected.id));
       setSelected(null);
-      fetchRestaurants();
     } else {
       const data = await res.json().catch(() => ({}));
       alert(`永久刪除失敗：${data.error || res.statusText}`);
@@ -513,7 +630,16 @@ export default function AdminCRM() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-bold text-gray-800 truncate">{selected.name}</h2>
+                    <h2 className="text-lg font-bold text-gray-800">
+                      <InlineEditableField
+                        value={selected.name}
+                        onSave={saveNameInline}
+                        disabled={!!selected.disabled_at}
+                        disabledTooltip="已停用,請先恢復"
+                        className="truncate"
+                        inputClassName="text-lg font-bold text-gray-800 px-1 py-0.5 border border-blue-400 rounded outline-none w-full"
+                      />
+                    </h2>
                     {!editing ? (
                       <button onClick={() => setEditing(true)}
                         disabled={!!selected.disabled_at}
@@ -575,10 +701,21 @@ export default function AdminCRM() {
                     </div>
                   </div>
                   {!editing && (
-                    <div className="mt-1 text-sm text-gray-700 break-all leading-relaxed">{selected.address}</div>
+                    <div className="mt-1 text-sm text-gray-700 break-all leading-relaxed">
+                      <InlineEditableField
+                        value={selected.address}
+                        onSave={saveAddressInline}
+                        disabled={!!selected.disabled_at}
+                        disabledTooltip="已停用,請先恢復"
+                        className=""
+                        inputClassName="text-sm text-gray-700 px-1 py-0.5 border border-blue-400 rounded outline-none w-full"
+                        placeholder="地址"
+                      />
+                    </div>
                   )}
                   {editing && (
                     <div className="mt-2 grid grid-cols-2 gap-2 max-w-lg">
+                      <input value={editForm.name || ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder="店名" className="col-span-2 px-2 py-1 border rounded text-sm" />
                       <input value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="電話" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.facebook || ''} onChange={e => setEditForm(p => ({ ...p, facebook: e.target.value }))} placeholder="Facebook" className="px-2 py-1 border rounded text-sm" />
                       <input value={editForm.instagram || ''} onChange={e => setEditForm(p => ({ ...p, instagram: e.target.value }))} placeholder="Instagram" className="px-2 py-1 border rounded text-sm" />

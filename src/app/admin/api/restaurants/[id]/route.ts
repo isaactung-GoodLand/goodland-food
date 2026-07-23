@@ -14,13 +14,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json();
-  const { name, phone, facebook, instagram, line, address, priority } = body;
+  const { name: rawName, phone, facebook, instagram, line, address, priority } = body;
+  const name = rawName;
 
   // 軟刪除守門:已停用的店家預設不能編輯,避免在背景誤改已下架資料
   // 若 admin 明確允許(例如:恢復前要先修地址),帶 ?allow_disabled=true
   const { searchParams } = new URL(request.url);
   const allowDisabled = searchParams.get('allow_disabled') === 'true';
   const guardClause = allowDisabled ? '' : 'AND disabled_at IS NULL';
+
+  function normalizeString(raw: unknown, _fallback?: unknown): { touch: boolean; value: string | null } {
+    if (raw === undefined) return { touch: false, value: null };
+    if (raw === null) return { touch: true, value: null };
+    const s = String(raw).trim();
+    if (s === '') return { touch: true, value: null };
+    return { touch: true, value: s };
+  }
+  const { touch: touchName, value: nameValue } = normalizeString(rawName, name);
 
   // priority: number (1..5) | null | undefined。
   //   - undefined: 沒帶 → 保留原值
@@ -37,7 +47,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   const res = await pool.query(
     `UPDATE restaurants SET
-       name = COALESCE($1, name),
+       name = CASE WHEN $9::boolean THEN $1 ELSE name END,
        phone = COALESCE($2, phone),
        facebook = COALESCE($3, facebook),
        instagram = COALESCE($4, instagram),
@@ -45,9 +55,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
        address = COALESCE($6, address),
        priority = CASE WHEN $8::boolean THEN $7::smallint ELSE priority END,
        updated_at = NOW()
-     WHERE id = $9 ${guardClause}
+     WHERE id = $10 ${guardClause}
      RETURNING *`,
-    [name, phone, facebook, instagram, line, address, priorityValue, touchPriority, id]
+    [nameValue, phone, facebook, instagram, line, address, priorityValue, touchPriority, touchName, id]
   );
   if (res.rows.length === 0) {
     // 區分 404 vs 409（已停用）
