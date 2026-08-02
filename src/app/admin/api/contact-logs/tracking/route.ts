@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       ll.latest_contact_date,
       ll.latest_status,
       ll.latest_created_at,
-      (SELECT COUNT(*) FROM contact_logs cl2 WHERE cl2.restaurant_id = r.id) AS total_logs
+      (SELECT COUNT(*)::int FROM contact_logs cl2 WHERE cl2.restaurant_id = r.id) AS total_logs
     FROM latest_logs ll
     JOIN restaurants r ON r.id = ll.restaurant_id
     WHERE r.disabled_at IS NULL

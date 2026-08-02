@@ -170,6 +170,26 @@ export default function AdminCRM() {
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
+  // 從 tracking 頁跳過來時，URL 帶 ?restaurant_id=N，自動選中該店家
+  // 用 window.location.search 而非 useSearchParams 避免 Next.js 16 prerender 雷區
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const idStr = new URLSearchParams(window.location.search).get('restaurant_id');
+    if (!idStr) return;
+    const id = parseInt(idStr, 10);
+    if (!id || !restaurants.length) return;
+    const target = restaurants.find(r => r.id === id);
+    if (target && (!selected || selected.id !== id)) {
+      void selectRestaurant(target);
+    }
+    // 已讀取後清掉 query string，避免之後 reload 還重複跳窗
+    if (window.history?.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('restaurant_id');
+      window.history.replaceState({}, '', url);
+    }
+  }, [restaurants, selected]);
+
   useEffect(() => {
     const cs = [...new Set(restaurants.map(r => r.city).filter(Boolean))].sort();
     setCities(cs);

@@ -217,10 +217,14 @@ export default function TrackingPage() {
               </div>
 
               <div className="border-t border-gray-100 pt-3">
-                <div className="text-xs text-gray-500">
-                  想看完整的歷史紀錄（所有聯絡紀錄）→ 請到
-                  <Link href={`/admin`} className="text-blue-600 hover:underline mx-1">CRM</Link>
-                  點選這家店
+                <Link
+                  href={`/admin?restaurant_id=${selected.restaurant_id}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  在 CRM 中開啟 ↗
+                </Link>
+                <div className="text-xs text-gray-500 mt-2">
+                  跳到 CRM 並自動開啟這家店（帶 restaurant_id query param）
                 </div>
               </div>
             </div>
