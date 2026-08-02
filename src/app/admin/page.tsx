@@ -459,6 +459,7 @@ export default function AdminCRM() {
           <h1 className="text-sm font-bold text-gray-800 flex items-center justify-between">
             <span>🍜 CRM</span>
             <div className="flex items-center gap-2">
+              <Link href="/admin/tracking" className="text-xs text-gray-400 hover:text-blue-600" title="追蹤名單">📋</Link>
               <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-600" title="登出">🚪</button>
               <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
             </div>
