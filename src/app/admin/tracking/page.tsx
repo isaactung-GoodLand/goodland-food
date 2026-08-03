@@ -71,6 +71,16 @@ export default function TrackingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // sortOrder: 'asc' = 舊→新（最久沒聯絡的排最上，最適合追蹤場景）
+  //           'desc' = 新→舊（最近聯絡的排最上）
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // 根據 sortOrder 對 rows 排序（created_at 越舊 = 時間越小）
+  const sortedRows = [...rows].sort((a, b) => {
+    const ta = new Date(a.latest_contact_date).getTime();
+    const tb = new Date(b.latest_contact_date).getTime();
+    return sortOrder === 'asc' ? ta - tb : tb - ta;
+  });
 
   const fetchTracking = useCallback(async () => {
     setLoading(true);
@@ -124,6 +134,18 @@ export default function TrackingPage() {
         <span className="text-xs text-gray-500">
           店家「最近一次聯絡」在這個範圍內
         </span>
+        <div className="flex items-center gap-1.5 ml-2">
+          <label className="text-sm text-gray-700 font-medium">排序:</label>
+          <select
+            value={sortOrder}
+            onChange={e => setSortOrder(e.target.value as 'asc' | 'desc')}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="暢/反序：'舊→新' 把最久沒聯絡的排最上（新到者眼見為要追蹤者）；'新→舊' 把最近聯絡的排最上"
+          >
+            <option value="asc">舊→新（久未聯絡）</option>
+            <option value="desc">新→舊（最近聯絡）</option>
+          </select>
+        </div>
         <button
           onClick={fetchTracking}
           disabled={loading}
@@ -149,7 +171,7 @@ export default function TrackingPage() {
             </div>
           )}
           <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-            {rows.map(row => (
+            {sortedRows.map(row => (
               <li
                 key={row.restaurant_id}
                 onClick={() => setSelectedId(row.restaurant_id)}
