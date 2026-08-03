@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 interface TrackingRow {
@@ -107,6 +107,37 @@ export default function TrackingPage() {
 
   const selected = rows.find(r => r.restaurant_id === selectedId) ?? null;
 
+  // ===== 鍵盤導航: ↑↓ 切換 =====
+  const liRefs = useRef<(HTMLLIElement | null)[]>([]);
+  // reset refs when rows length changes
+  useEffect(() => { liRefs.current = liRefs.current.slice(0, sortedRows.length); }, [sortedRows.length]);
+  // re-derive refs into sortedRows.length each render
+  if (liRefs.current.length > sortedRows.length) liRefs.current.length = sortedRows.length;
+
+  const moveSelection = useCallback((dir: -1 | 1) => {
+    if (sortedRows.length === 0) return;
+    const idx = sortedRows.findIndex(r => r.restaurant_id === selectedId);
+    let next: number;
+    if (idx === -1) {
+      next = dir === 1 ? 0 : sortedRows.length - 1;
+    } else {
+      next = (idx + dir + sortedRows.length) % sortedRows.length;
+    }
+    const target = sortedRows[next];
+    setSelectedId(target.restaurant_id);
+    // focus the corresponding <li> via microtask so React reconciliation completes
+    queueMicrotask(() => {
+      const node = liRefs.current[next];
+      node?.focus();
+      node?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }, [sortedRows, selectedId]);
+
+  const handleListKeyDown = useCallback((e: React.KeyboardEvent<HTMLUListElement>) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
+  }, [moveSelection]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -174,12 +205,19 @@ export default function TrackingPage() {
               {days === '' ? '還沒有任何聯絡紀錄。' : '這個範圍內沒有店家。'}
             </div>
           )}
-          <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
-            {sortedRows.map(row => (
+          <ul
+            className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto outline-none"
+            tabIndex={0}
+            onKeyDown={handleListKeyDown}
+            aria-label="追蹤店家列表，使用方向鍵切換"
+          >
+            {sortedRows.map((row, i) => (
               <li
                 key={row.restaurant_id}
+                ref={el => { liRefs.current[i] = el; }}
+                tabIndex={-1}
                 onClick={() => setSelectedId(row.restaurant_id)}
-                className={`p-3 cursor-pointer hover:bg-blue-50 transition ${selectedId === row.restaurant_id ? 'bg-blue-50' : ''}`}
+                className={`p-3 cursor-pointer hover:bg-blue-50 transition ${selectedId === row.restaurant_id ? 'bg-blue-50' : ''} focus:outline-none focus:bg-blue-50 focus:ring-2 focus:ring-inset focus:ring-blue-300`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-medium text-sm text-gray-800 truncate flex-1">{row.restaurant_name}</span>
