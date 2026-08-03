@@ -9,9 +9,11 @@ import { pool } from '@/lib/db';
  *
  * Query params:
  *   days (optional): restrict to restaurants whose last contact_date
- *                    falls within the last N days. 7, 30, 60, 180, 365.
+ *                    is N days ago OR OLDER — i.e. "hasn't been contacted
+ *                    in N days or more". 7, 30, 60, 180, 365.
  *                    If omitted, no time filter — returns all tracked
  *                    restaurants.
+ *                    The page UI labels it as 「N 天以上沒聯絡」.
  *
  * Restaurants that are soft-deleted (disabled_at IS NOT NULL) are
  * excluded by default — they're not currently actionable.
@@ -26,7 +28,8 @@ export async function GET(request: Request) {
 
   // 1) Inner DISTINCT ON to pick the latest log per restaurant
   // 2) Filter by latest contact_date in outer WHERE
-  // 3) ORDER BY latest_contact_date DESC for the UI
+  //    Semantics: 「N 天以上沒聯絡」 → contact_date <= today - N days
+  // 3) ORDER BY latest_contact_date ASC for the UI (most stale on top)
   const sql = `
     WITH latest_logs AS (
       SELECT DISTINCT ON (cl.restaurant_id)
@@ -57,8 +60,8 @@ export async function GET(request: Request) {
     FROM latest_logs ll
     JOIN restaurants r ON r.id = ll.restaurant_id
     WHERE r.disabled_at IS NULL
-      ${days !== null ? 'AND ll.latest_contact_date >= CURRENT_DATE - $1::int * INTERVAL \'1 day\'' : ''}
-    ORDER BY ll.latest_contact_date DESC
+      ${days !== null ? 'AND ll.latest_contact_date <= CURRENT_DATE - $1::int * INTERVAL \'1 day\'' : ''}
+    ORDER BY ll.latest_contact_date ASC
   `;
 
   const params = days !== null ? [days] : [];

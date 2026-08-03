@@ -37,11 +37,11 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const DAY_OPTIONS: { value: string; label: string }[] = [
-  { value: '7', label: '7 天內' },
-  { value: '30', label: '30 天內' },
-  { value: '60', label: '2 個月內' },
-  { value: '180', label: '半年內' },
-  { value: '365', label: '一年內' },
+  { value: '7', label: '7 天以上沒聯絡' },
+  { value: '30', label: '30 天以上沒聯絡' },
+  { value: '60', label: '2 個月以上沒聯絡' },
+  { value: '180', label: '半年以上沒聯絡' },
+  { value: '365', label: '一年以上沒聯絡' },
 ];
 
 function formatRelative(iso: string): string {
@@ -132,7 +132,7 @@ export default function TrackingPage() {
           ))}
         </select>
         <span className="text-xs text-gray-500">
-          店家「最近一次聯絡」在這個範圍內
+          店家「最近一次聯絡」距離現在已超過這個天數
         </span>
         <div className="flex items-center gap-1.5 ml-2">
           <label className="text-sm text-gray-700 font-medium">排序:</label>
@@ -167,7 +167,9 @@ export default function TrackingPage() {
           )}
           {!loading && rows.length === 0 && !error && (
             <div className="p-8 text-center text-sm text-gray-400">
-              {days === '7' ? '近 7 天沒有聯絡紀錄。試試放寬到 30 天或以上？' : '這個範圍內沒有聯絡紀錄。'}
+              {days === '7'
+                ? '沒有店家超過 7 天沒聯絡 🎉'
+                : `沒有店家超過 ${days} 天沒聯絡。試試放寬到較小天數？`}
             </div>
           )}
           <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
