@@ -37,11 +37,12 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const DAY_OPTIONS: { value: string; label: string }[] = [
-  { value: '7', label: '> 7天' },
-  { value: '30', label: '> 30天' },
-  { value: '60', label: '> 60天' },
-  { value: '180', label: '> 180天' },
-  { value: '365', label: '> 365天' },
+  { value: '', label: '所有' },
+  { value: '7', label: '> 7 天' },
+  { value: '30', label: '> 30 天' },
+  { value: '60', label: '> 60 天' },
+  { value: '180', label: '> 180 天' },
+  { value: '365', label: '> 365 天' },
 ];
 
 function formatRelative(iso: string): string {
@@ -86,7 +87,10 @@ export default function TrackingPage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`/admin/api/contact-logs/tracking?days=${days}`, { cache: 'no-store' });
+      const url = days === ''
+        ? '/admin/api/contact-logs/tracking'
+        : `/admin/api/contact-logs/tracking?days=${days}`;
+      const r = await fetch(url, { cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       setRows(data.tracking || []);
@@ -132,7 +136,7 @@ export default function TrackingPage() {
           ))}
         </select>
         <span className="text-xs text-gray-500">
-          店家「最近一次聯絡」距離現在已超過這個天數
+          {days === '' ? '所有聯絡過的店家（不限時間）' : '店家「最近一次聯絡」距離現在已超過這個天數'}
         </span>
         <div className="flex items-center gap-1.5 ml-2">
           <label className="text-sm text-gray-700 font-medium">排序:</label>
@@ -167,9 +171,7 @@ export default function TrackingPage() {
           )}
           {!loading && rows.length === 0 && !error && (
             <div className="p-8 text-center text-sm text-gray-400">
-              {days === '7'
-                ? '沒有店家超過 7 天沒聯絡 🎉'
-                : `沒有店家超過 ${days} 天沒聯絡。試試放寬到較小天數？`}
+              {days === '' ? '還沒有任何聯絡紀錄。' : '這個範圍內沒有店家。'}
             </div>
           )}
           <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
