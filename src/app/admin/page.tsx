@@ -135,6 +135,8 @@ export default function AdminCRM() {
   const [editForm, setEditForm] = useState<Partial<Restaurant>>({});
   const [saving, setSaving] = useState(false);
   const [hoveredLog, setHoveredLog] = useState<{ log: ContactLog; x: number; y: number } | null>(null);
+  // 從 tracking 頁帶 ?restaurant_id=N 跳過來時,把那筆店家拉到這個 state 顯示在左側列表最頂
+  const [trackedRestaurant, setTrackedRestaurant] = useState<Restaurant | null>(null);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
   const [editingNote, setEditingNote] = useState('');
   const [savingLog, setSavingLog] = useState(false);
@@ -177,18 +179,34 @@ export default function AdminCRM() {
     const idStr = new URLSearchParams(window.location.search).get('restaurant_id');
     if (!idStr) return;
     const id = parseInt(idStr, 10);
-    if (!id || !restaurants.length) return;
-    const target = restaurants.find(r => r.id === id);
-    if (target && (!selected || selected.id !== id)) {
-      void selectRestaurant(target);
-    }
-    // 已讀取後清掉 query string，避免之後 reload 還重複跳窗
+    if (!id) return;
+    if (trackedRestaurant?.id === id) return;
+    void (async () => {
+      try {
+        const res = await fetch(`/admin/api/restaurants/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const inMainList = restaurants.find(r => r.id === id);
+        if (inMainList) {
+          if (!selected || selected.id !== id) {
+            void selectRestaurant(inMainList);
+          }
+        } else {
+          setTrackedRestaurant(data);
+          setSelected(data);
+          setEditForm(data);
+          setContactLogs(data.contact_logs || []);
+        }
+      } catch {
+        // swallow
+      }
+    })();
     if (window.history?.replaceState) {
       const url = new URL(window.location.href);
       url.searchParams.delete('restaurant_id');
       window.history.replaceState({}, '', url);
     }
-  }, [restaurants, selected]);
+  }, [restaurants, selected, trackedRestaurant]);
 
   useEffect(() => {
     const cs = [...new Set(restaurants.map(r => r.city).filter(Boolean))].sort();
@@ -529,10 +547,39 @@ export default function AdminCRM() {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-3 text-center text-gray-400 text-xs">載入中...</div>
-          ) : restaurants.length === 0 ? (
+          ) : restaurants.length === 0 && !trackedRestaurant ? (
             <div className="p-3 text-center text-gray-400 text-xs">無結果</div>
           ) : (
-            restaurants.map(r => {
+            <>
+              {/* 從追蹤名單跳轉的店家：固定顯示在左側列表最頂 */}
+              {trackedRestaurant && (
+                <div
+                  key={`tracked-${trackedRestaurant.id}`}
+                  onClick={() => {
+                    setSelected(trackedRestaurant);
+                    setEditForm(trackedRestaurant);
+                    setContactLogs(trackedRestaurant.contact_logs || []);
+                    fetch(`/admin/api/restaurants/${trackedRestaurant.id}`).then(r => r.json()).then(d => setContactLogs(d.contact_logs || []));
+                  }}
+                  className={`px-3 py-2 border-b-2 border-b-blue-200 cursor-pointer hover:bg-blue-50 transition bg-amber-50/50 ${selected?.id === trackedRestaurant.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}
+                >
+                  <div className="text-[10px] font-medium text-amber-700 mb-0.5 flex items-center justify-between">
+                    <span>🎯 從追蹤名單跳轉</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setTrackedRestaurant(null); }}
+                      className="text-gray-400 hover:text-red-600 px-1"
+                      title="移除這個標籤"
+                    >✕</button>
+                  </div>
+                  <div className="font-medium text-xs text-gray-800 truncate">
+                    {trackedRestaurant.name}
+                  </div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">
+                    {trackedRestaurant.city} {trackedRestaurant.district}
+                  </div>
+                </div>
+              )}
+              {restaurants.map(r => {
               const lastLog = getLastLog(r);
               const isDisabled = r.disabled_at != null;
               return (
@@ -602,7 +649,8 @@ export default function AdminCRM() {
                   )}
                 </div>
               );
-            })
+            })}
+            </>
           )}
         </div>
         <div className="p-2 border-t border-gray-200 flex items-center justify-between bg-white">
