@@ -37,11 +37,11 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const DAY_OPTIONS: { value: string; label: string }[] = [
-  { value: '7', label: '7 天以上沒聯絡' },
-  { value: '30', label: '30 天以上沒聯絡' },
-  { value: '60', label: '2 個月以上沒聯絡' },
-  { value: '180', label: '半年以上沒聯絡' },
-  { value: '365', label: '一年以上沒聯絡' },
+  { value: '7', label: '> 7天' },
+  { value: '30', label: '> 30天' },
+  { value: '60', label: '> 60天' },
+  { value: '180', label: '> 180天' },
+  { value: '365', label: '> 365天' },
 ];
 
 function formatRelative(iso: string): string {
