@@ -43,3 +43,10 @@ next-env.d.ts
 
 # gemini-cli: backs up .git directory before file edits. Never commit these.
 /.git.backup-*
+
+
+# local backups of prod DB (kept for 30 days, then removed)
+/backups/
+
+# discover script log output (gemini CLI raw responses per day)
+/discover-logs/

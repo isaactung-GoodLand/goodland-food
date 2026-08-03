@@ -21,6 +21,7 @@ interface Restaurant {
   last_contact_date?: string;
   contact_logs?: any[];
   priority?: number | null;
+  created_at?: string | null;
   // 軟刪除欄位
   disabled_at?: string | null;
   disabled_reason?: string | null;
@@ -117,6 +118,33 @@ export default function AdminCRM() {
   const [cityFilter, setCityFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
+  // NEW: 這個月新增的店家 (created_at >= 本月 1 日)
+  const [newOnly, setNewOnly] = useState(false);
+  // viewed: 本月 NEW 店家已被 review 過的 ID 集合(用 localStorage 跨 session 保留)
+  const [viewedIds, setViewedIds] = useState<Set<number>>(new Set());
+
+  // 從 localStorage 讀 saved viewed IDs
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const monthKey = `viewed_new_${new Date().toISOString().slice(0, 7)}`;  // YYYY-MM
+    try {
+      const stored = JSON.parse(localStorage.getItem(monthKey) || '[]') as number[];
+      if (Array.isArray(stored)) setViewedIds(new Set(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  // 標記一個店家為已 viewed
+  const markViewed = (id: number) => {
+    if (typeof window === 'undefined') return;
+    setViewedIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      const monthKey = `viewed_new_${new Date().toISOString().slice(0, 7)}`;
+      localStorage.setItem(monthKey, JSON.stringify([...next]));
+      return next;
+    });
+  };
   // 預設包含已停用
   const [includeDisabled, setIncludeDisabled] = useState(true);
   const [onlyDisabled, setOnlyDisabled] = useState(false);
@@ -147,6 +175,20 @@ export default function AdminCRM() {
   const isLeftResizing = useRef(false);
   const isResizing = useRef(false);
 
+  // 判斷店家是否為本月新增
+  function isNewRestaurant(r: Restaurant): boolean {
+    if (!r.created_at) return false;
+    const since = getNewSince();
+    return r.created_at.slice(0, 10) >= since;
+  }
+
+  // 計算「本月 1 日 00:00:00」用於 NEW filter
+  function getNewSince(): string {
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return firstOfMonth.toISOString().slice(0, 10);  // YYYY-MM-DD format
+  }
+
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -154,6 +196,7 @@ export default function AdminCRM() {
     if (cityFilter) params.set('city', cityFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
     if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
+    if (newOnly) params.set('new_since', getNewSince());
     if (!filters.phone) params.set('has_phone', 'true');
     if (!filters.facebook) params.set('has_facebook', 'true');
     if (!filters.instagram) params.set('has_instagram', 'true');
@@ -168,7 +211,7 @@ export default function AdminCRM() {
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, filters, page, includeDisabled, onlyDisabled, sort]);
+  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
@@ -218,6 +261,7 @@ export default function AdminCRM() {
     setEditForm(r);
     setContactLogs(r.contact_logs || []);
     setEditing(false);
+    markViewed(r.id);  // <-- 點擊 = 已 review
     const res = await fetch(`/admin/api/restaurants/${r.id}`);
     const data = await res.json();
     setContactLogs(data.contact_logs || []);
@@ -579,7 +623,7 @@ export default function AdminCRM() {
                   </div>
                 </div>
               )}
-              {restaurants.map(r => {
+              {restaurants.filter(r => newOnly ? !viewedIds.has(r.id) : true).map(r => {
               const lastLog = getLastLog(r);
               const isDisabled = r.disabled_at != null;
               return (
@@ -588,9 +632,17 @@ export default function AdminCRM() {
                   className={`px-3 py-2 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition relative group ${selected?.id === r.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''} ${isDisabled ? 'opacity-60 bg-gray-50' : ''}`}
                 >
                   {/* Indicators */}
-                  <span className="absolute top-2 right-2 flex gap-0.5">
+                  <span className="absolute top-2 right-2 flex gap-0.5 items-center">
                     {r.has_notes && <span title={r.last_note || '有備註'} className="w-2 h-2 rounded-full bg-red-500 shrink-0" />}
                     {r.has_hongkong_milk_tea && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                    {isNewRestaurant(r) && (
+                      <span
+                        className={`shrink-0 inline-flex items-center justify-center px-1 h-3.5 rounded text-[9px] font-bold leading-none ${viewedIds.has(r.id) ? 'bg-gray-200 text-gray-500' : 'bg-green-500 text-white animate-pulse'}`}
+                        title={viewedIds.has(r.id) ? '本月新增 (已查看)' : '本月新增 (尚未查看)'}
+                      >
+                        NEW
+                      </span>
+                    )}
                   </span>
                   <div className="font-medium text-xs text-gray-800 truncate pr-10 flex items-center gap-1.5">
                     {/* 優先度徽章:1-5 顯示圈數字,NULL 也預設顯示為 ③(default=3 的視覺錨點) */}

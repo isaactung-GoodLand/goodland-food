@@ -11,6 +11,7 @@ export async function GET(request: Request) {
   const hasInstagram = searchParams.get('has_instagram') === 'true';
   const hasLine = searchParams.get('has_line') === 'true';
   const hasGmaps = searchParams.get('has_gmaps') === 'true';
+  const newSince = searchParams.get('new_since') || '';
   const page = parseInt(searchParams.get('page') || '1');
   // 軟刪除過濾：
   //   - 預設只顯示啟用中的店家（disabled_at IS NULL）
@@ -55,6 +56,11 @@ export async function GET(request: Request) {
   let paramIndex = 1;
   if (q) { values.push(`%${q}%`); paramIndex++; }
   if (city) { values.push(city); paramIndex++; }
+  if (newSince) {
+    where += ` AND created_at >= $${paramIndex}`;
+    values.push(newSince);
+    paramIndex++;
+  }
 
   // Count
   const countResult = await pool.query(`SELECT COUNT(*) FROM restaurants ${where}`, values);
