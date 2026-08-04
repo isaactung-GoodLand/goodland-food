@@ -114,24 +114,15 @@ function InlineEditableField({
 export default function AdminCRM() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selected, setSelected] = useState<Restaurant | null>(null);
-  const [search, setSearch] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    // 從 dashboard 跳過來帶 ?district=X 時,把搜尋欄預填
-    // (server 端走 district param 過濾,這裡 search = 在 client 端搜)
-    const d = new URLSearchParams(window.location.search).get('district');
-    return d || '';
-  });
-  const [cityFilter, setCityFilter] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return new URLSearchParams(window.location.search).get('city') || '';
-  });
+  // filter states: 用 useEffect 在 mount 時讀 URL (比 useState lazy init 更可靠,
+  // 因為 SSR 階段 window undefined 導致初始值一律空,client 端 lazy init 才能讀 URL,
+  // 但 client 端 React hydration 過程可能沒接到那次的最新 state)
+  const [search, setSearch] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [districtFilter, setDistrictFilter] = useState('');
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
-  // contact status filter: pending / contacted / rejected / converted / suspended — 用 latest log 的 status 過濾
-  const [statusFilter, setStatusFilter] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return new URLSearchParams(window.location.search).get('status') || '';
-  });
+  const [statusFilter, setStatusFilter] = useState<string>('');
   // NEW: 這個月新增的店家 (created_at >= 本月 1 日)
   const [newOnly, setNewOnly] = useState(false);
   // viewed: 本月 NEW 店家已被 review 過的 ID 集合(用 localStorage 跨 session 保留)
@@ -208,6 +199,7 @@ export default function AdminCRM() {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
     if (cityFilter) params.set('city', cityFilter);
+    if (districtFilter) params.set('district', districtFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
     if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
     if (statusFilter) params.set('status', statusFilter);
@@ -226,7 +218,7 @@ export default function AdminCRM() {
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, statusFilter, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
+  }, [search, cityFilter, districtFilter, uncontactedOnly, hasMilkTeaOnly, statusFilter, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
@@ -270,6 +262,19 @@ export default function AdminCRM() {
     const cs = [...new Set(restaurants.map(r => r.city).filter(Boolean))].sort();
     setCities(cs);
   }, [restaurants]);
+
+  // Mount 時讀 URL → filter states
+  // 不在 useState lazy init 是因為 SSR 時 window undefined → 初始空 → client 端
+  // hydration 也可能不會重新讀 URL,造成 select 顯示「所有縣市」但實際上有 city filter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlCity = params.get('city') || '';
+    const urlDistrict = params.get('district') || '';
+    const urlStatus = params.get('status') || '';
+    if (urlCity) setCityFilter(urlCity);
+    if (urlDistrict) setDistrictFilter(urlDistrict);
+    if (urlStatus) setStatusFilter(urlStatus);
+  }, []);
 
   const selectRestaurant = async (r: Restaurant) => {
     setSelected(r);
