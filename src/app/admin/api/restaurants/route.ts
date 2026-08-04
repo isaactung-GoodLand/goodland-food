@@ -4,6 +4,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q') || '';
   const city = searchParams.get('city') || '';
+  const district = searchParams.get('district') || '';
   const uncontacted = searchParams.get('uncontacted') === 'true';
   const hasMilkTea = searchParams.get('has_milk_tea') === 'true';
   const hasPhone = searchParams.get('has_phone') === 'true';
@@ -12,6 +13,8 @@ export async function GET(request: Request) {
   const hasLine = searchParams.get('has_line') === 'true';
   const hasGmaps = searchParams.get('has_gmaps') === 'true';
   const newSince = searchParams.get('new_since') || '';
+  // 聯絡狀態 dashboard 跳過來帶的 status (pending/contacted/rejected/converted/suspended)
+  const status = searchParams.get('status') || '';
   const page = parseInt(searchParams.get('page') || '1');
   // 軟刪除過濾：
   //   - 預設只顯示啟用中的店家（disabled_at IS NULL）
@@ -24,46 +27,69 @@ export async function GET(request: Request) {
   const limit = 20;
   const offset = (page - 1) * limit;
 
-  let where = 'WHERE 1=1';
-  if (q) where += ` AND (name ILIKE $${1} OR address ILIKE $${1})`;
-  if (city) where += ` AND city = $2`;
+  // build where + values in lock-step
+  const whereParts: string[] = ['WHERE 1=1'];
+  const values: any[] = [];
+  let paramIndex = 1;
+
+  if (q) {
+    whereParts.push(`(name ILIKE $${paramIndex} OR address ILIKE $${paramIndex})`);
+    values.push(`%${q}%`);
+    paramIndex++;
+  }
+  if (city) {
+    whereParts.push(`city = $${paramIndex}`);
+    values.push(city);
+    paramIndex++;
+  }
+  if (district) {
+    whereParts.push(`district = $${paramIndex}`);
+    values.push(district);
+    paramIndex++;
+  }
 
   if (onlyDisabled) {
-    where += ` AND disabled_at IS NOT NULL`;
+    whereParts.push(`disabled_at IS NOT NULL`);
   } else if (!includeDisabled) {
-    where += ` AND disabled_at IS NULL`;
+    whereParts.push(`disabled_at IS NULL`);
   }
 
   // OR filters: show shops that HAVE at least one of the missing contact info
   const orConditions: string[] = [];
-  if (hasPhone) orConditions.push('phone IS NOT NULL AND phone != \'\'');
-  if (hasFacebook) orConditions.push('facebook IS NOT NULL AND facebook != \'\'');
-  if (hasInstagram) orConditions.push('instagram IS NOT NULL AND instagram != \'\'');
-  if (hasLine) orConditions.push('line IS NOT NULL AND line != \'\'');
-  if (hasGmaps) orConditions.push('gmaps_url IS NOT NULL AND gmaps_url != \'\'');
+  if (hasPhone) orConditions.push(`phone IS NOT NULL AND phone != ''`);
+  if (hasFacebook) orConditions.push(`facebook IS NOT NULL AND facebook != ''`);
+  if (hasInstagram) orConditions.push(`instagram IS NOT NULL AND instagram != ''`);
+  if (hasLine) orConditions.push(`line IS NOT NULL AND line != ''`);
+  if (hasGmaps) orConditions.push(`gmaps_url IS NOT NULL AND gmaps_url != ''`);
   if (orConditions.length > 0) {
-    where += ` AND (${orConditions.join(' OR ')})`;
+    whereParts.push(`(${orConditions.join(' OR ')})`);
   }
 
   if (uncontacted) {
-    where += ` AND NOT EXISTS (SELECT 1 FROM contact_logs cl WHERE cl.restaurant_id = restaurants.id)`;
+    whereParts.push(`NOT EXISTS (SELECT 1 FROM contact_logs cl WHERE cl.restaurant_id = restaurants.id)`);
   }
   if (hasMilkTea) {
-    where += ` AND has_hongkong_milk_tea = true`;
+    whereParts.push(`has_hongkong_milk_tea = true`);
   }
-
-  const values: any[] = [];
-  let paramIndex = 1;
-  if (q) { values.push(`%${q}%`); paramIndex++; }
-  if (city) { values.push(city); paramIndex++; }
-  if (newSince) {
-    where += ` AND created_at >= $${paramIndex}`;
-    values.push(newSince);
+  if (status) {
+    // 過濾「最新一筆」 contact_logs 的 status
+    // 用 LATERAL JOIN 對每個 row 取最新 status, 用 paramIndex placeholder
+    whereParts.push(`(
+      SELECT status FROM contact_logs cl
+      WHERE cl.restaurant_id = restaurants.id
+      ORDER BY created_at DESC LIMIT 1
+    ) = $${paramIndex}`);
+    values.push(status);
     paramIndex++;
   }
 
+  // whereParts 第一個是 'WHERE 1=1', 其餘是條件. 拼成最終 SQL fragment.
+  const whereClause = whereParts.length > 1
+    ? `${whereParts[0]} AND ${whereParts.slice(1).join(' AND ')}`
+    : whereParts[0];
+
   // Count
-  const countResult = await pool.query(`SELECT COUNT(*) FROM restaurants ${where}`, values);
+  const countResult = await pool.query(`SELECT COUNT(*) FROM restaurants ${whereClause}`, values);
   const total = parseInt(countResult.rows[0].count);
 
   // Data
@@ -81,7 +107,7 @@ export async function GET(request: Request) {
            disabled_at, disabled_reason, disabled_by, restored_at,
            (SELECT notes FROM contact_logs WHERE restaurant_id = restaurants.id ORDER BY created_at DESC LIMIT 1) AS last_note
     FROM restaurants
-    ${where}
+    ${whereClause}
     ORDER BY ${orderBy}
     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
   `, values);

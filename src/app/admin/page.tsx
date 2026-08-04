@@ -114,8 +114,17 @@ function InlineEditableField({
 export default function AdminCRM() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selected, setSelected] = useState<Restaurant | null>(null);
-  const [search, setSearch] = useState('');
-  const [cityFilter, setCityFilter] = useState('');
+  const [search, setSearch] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    // 從 dashboard 跳過來帶 ?district=X 時,把搜尋欄預填
+    // (server 端走 district param 過濾,這裡 search = 在 client 端搜)
+    const d = new URLSearchParams(window.location.search).get('district');
+    return d || '';
+  });
+  const [cityFilter, setCityFilter] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('city') || '';
+  });
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
   // NEW: 這個月新增的店家 (created_at >= 本月 1 日)
@@ -542,6 +551,7 @@ export default function AdminCRM() {
             <span>🍜 CRM</span>
             <div className="flex items-center gap-2">
               <Link href="/admin/tracking" className="text-xs text-gray-400 hover:text-blue-600" title="追蹤名單">📋</Link>
+              <Link href="/admin/contact-dashboard" className="text-xs text-gray-400 hover:text-purple-600" title="聯絡狀態儀表板">📊</Link>
               <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-600" title="登出">🚪</button>
               <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
             </div>
