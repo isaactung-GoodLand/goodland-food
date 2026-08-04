@@ -72,13 +72,20 @@ export async function GET(request: Request) {
     whereParts.push(`has_hongkong_milk_tea = true`);
   }
   if (status) {
-    // 過濾「最新一筆」 contact_logs 的 status
-    // 用 LATERAL JOIN 對每個 row 取最新 status, 用 paramIndex placeholder
-    whereParts.push(`(
-      SELECT status FROM contact_logs cl
+    // 過濾「最新一筆」 contact_logs 的 effective status:
+    //   有 notes → 'contacted' (不論原 status)
+    //   否則照原 status
+    //   沒任何 logs → 'pending'
+    // 注意: 用 COALESCE 把 NULL subquery 包起來, 沒 logs 的店會 satisfy 'pending' filter
+    whereParts.push(`COALESCE((
+      SELECT CASE
+        WHEN cl.notes IS NOT NULL AND cl.notes != '' THEN 'contacted'
+        ELSE COALESCE(cl.status, 'pending')
+      END
+      FROM contact_logs cl
       WHERE cl.restaurant_id = restaurants.id
-      ORDER BY created_at DESC LIMIT 1
-    ) = $${paramIndex}`);
+      ORDER BY cl.created_at DESC LIMIT 1
+    ), 'pending') = $${paramIndex}`);
     values.push(status);
     paramIndex++;
   }

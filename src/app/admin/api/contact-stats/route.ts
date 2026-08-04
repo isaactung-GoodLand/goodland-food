@@ -50,22 +50,34 @@ export async function GET() {
      WHERE disabled_at IS NULL`
   );
 
-  // 2. 取所有 contact_logs
+  // 2. 取所有 contact_logs (不只 status NOT NULL, 因為我們用「有 notes」的規則)
   const logsRes = await pool.query(
-    `SELECT restaurant_id, status, contact_date, created_at
-     FROM contact_logs
-     WHERE status IS NOT NULL`
+    `SELECT restaurant_id, status, contact_date, created_at, notes
+     FROM contact_logs`
   );
 
   // build map: restaurant_id → latest log by created_at
-  const latestByRestaurant = new Map<number, { status: string; contact_date: string | null; created_at: string }>();
-  for (const r of logsRes.rows as Array<{ restaurant_id: number; status: string; contact_date: string | null; created_at: string }>) {
+  const latestByRestaurant = new Map<number, {
+    status: string;
+    contact_date: string | null;
+    created_at: string;
+    notes: string | null;
+  }>();
+  for (const r of logsRes.rows as Array<{
+    restaurant_id: number;
+    status: string | null;
+    contact_date: string | null;
+    created_at: string;
+    notes: string | null;
+  }>) {
+    // 1 row per restaurant (already SELECT DISTINCT ON in above SQL — but for safety)
     const existing = latestByRestaurant.get(r.restaurant_id);
-    if (!existing || new Date(r.created_at) > new Date(existing.created_at)) {
+    if (!existing || r.created_at > existing.created_at) {
       latestByRestaurant.set(r.restaurant_id, {
-        status: r.status,
+        status: r.status || '',
         contact_date: r.contact_date,
         created_at: r.created_at,
+        notes: r.notes,
       });
     }
   }
@@ -136,12 +148,24 @@ export async function GET() {
     cityNode.total_restaurants++;
     districtNode.total_restaurants++;
 
-    // contact status: from latest log
+    // contact status: 最新一筆 log 的 status, 但特殊規則:
+    //   有 notes (非空) → 視為「已聯絡」,覆寫原本 status
+    //   沒任何 contact_logs → pending
     const latest = latestByRestaurant.get(r.id);
+    let effectiveStatus: 'pending' | 'contacted' | 'rejected' | 'converted' | 'suspended' = 'pending';
     if (latest) {
-      regionNode.contacts[latest.status]++;
-      cityNode.contacts[latest.status]++;
-      districtNode.contacts[latest.status]++;
+      const status = latest.status as 'contacted' | 'rejected' | 'converted' | 'suspended' | null;
+      // 規則: 有 notes 就當「已聯絡」
+      if (latest.notes && latest.notes.trim() !== '') {
+        effectiveStatus = 'contacted';
+      } else if (status && ['contacted', 'rejected', 'converted', 'suspended'].includes(status)) {
+        effectiveStatus = status;
+      } else {
+        effectiveStatus = 'pending';
+      }
+      regionNode.contacts[effectiveStatus]++;
+      cityNode.contacts[effectiveStatus]++;
+      districtNode.contacts[effectiveStatus]++;
       const ts = latest.contact_date || latest.created_at;
       if (!regionNode.last_contact_at || ts > regionNode.last_contact_at) regionNode.last_contact_at = ts;
       if (!cityNode.last_contact_at || ts > cityNode.last_contact_at) cityNode.last_contact_at = ts;

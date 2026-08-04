@@ -127,6 +127,11 @@ export default function AdminCRM() {
   });
   const [uncontactedOnly, setUncontactedOnly] = useState(false);
   const [hasMilkTeaOnly, setHasMilkTeaOnly] = useState(false);
+  // contact status filter: pending / contacted / rejected / converted / suspended — 用 latest log 的 status 過濾
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('status') || '';
+  });
   // NEW: 這個月新增的店家 (created_at >= 本月 1 日)
   const [newOnly, setNewOnly] = useState(false);
   // viewed: 本月 NEW 店家已被 review 過的 ID 集合(用 localStorage 跨 session 保留)
@@ -205,6 +210,7 @@ export default function AdminCRM() {
     if (cityFilter) params.set('city', cityFilter);
     if (uncontactedOnly) params.set('uncontacted', 'true');
     if (hasMilkTeaOnly) params.set('has_milk_tea', 'true');
+    if (statusFilter) params.set('status', statusFilter);
     if (newOnly) params.set('new_since', getNewSince());
     if (!filters.phone) params.set('has_phone', 'true');
     if (!filters.facebook) params.set('has_facebook', 'true');
@@ -220,7 +226,7 @@ export default function AdminCRM() {
     setRestaurants(data.restaurants);
     setTotal(data.total);
     setLoading(false);
-  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
+  }, [search, cityFilter, uncontactedOnly, hasMilkTeaOnly, statusFilter, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
 
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
@@ -571,6 +577,15 @@ export default function AdminCRM() {
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
             <option value="">所有縣市</option>
             {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+            <option value="">所有聯絡狀態</option>
+            <option value="pending">⏳ 未聯絡</option>
+            <option value="contacted">✓ 已聯絡</option>
+            <option value="rejected">✗ 被拒</option>
+            <option value="converted">🤝 轉合作</option>
+            <option value="suspended">⏸ 暫停追蹤</option>
           </select>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer"><input type="checkbox" checked={filters.phone} onChange={e => { setFilters(f => ({ ...f, phone: e.target.checked })); setPage(1); }} className="w-3 h-3 rounded accent-blue-500" />📞</label>
