@@ -354,6 +354,51 @@ export default function AdminCRM() {
     }
   };
 
+  // 快速設定聯絡狀態 — 用 contact_logs POST 寫一筆 log,
+  // dashboard 透過 latest log 的 status 反映店家對應 bucket
+  const quickSetContactStatus = async (status: 'pending' | 'contacted' | 'rejected' | 'converted' | 'suspended') => {
+    if (!selected) return;
+    const res = await fetch('/admin/api/contact-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurant_id: selected.id,
+        contact_type: 'other',
+        notes: '',                       // 空 notes 避免被「有 notes → 已聯絡」規則 override
+        contact_date: new Date().toISOString(),
+        status,
+      }),
+    });
+    if (res.ok) {
+      // 重新抓最新的 detail (含 updated contact_logs) + refresh list
+      const detailRes = await fetch(`/admin/api/restaurants/${selected.id}`);
+      if (detailRes.ok) {
+        const fresh = await detailRes.json();
+        setSelected(fresh);
+        setRestaurants(prev =>
+          prev.map(r => r.id === fresh.id ? { ...r, ...fresh } : r)
+        );
+      }
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(`更新聯絡狀態失敗：${data.error || res.statusText}`);
+    }
+  };
+
+  // 從 selected 的 contact_logs 推算「目前最新狀態」(沿用 contact-stats API 的相同規則)
+  const getCurrentContactStatus = (): 'pending' | 'contacted' | 'rejected' | 'converted' | 'suspended' => {
+    if (!selected) return 'pending';
+    if (selected.disabled_at) return 'suspended';
+    const logs: any[] = (selected as any).contact_logs || [];
+    if (logs.length === 0) return 'pending';
+    const latest = logs[0];
+    const notes = latest?.notes && latest.notes.trim() !== '';
+    const st = latest?.status;
+    if (notes) return 'contacted';
+    if (st && ['contacted', 'rejected', 'converted', 'suspended'].includes(st)) return st;
+    return 'pending';
+  };
+
   const handleDelete = async () => {
     if (!selected) return;
     const reason = prompt(`停用「${selected.name}」的原因（可留空）：`) ?? '';
@@ -822,6 +867,24 @@ export default function AdminCRM() {
                         🗑 停用
                       </button>
                     )}
+
+                    {/* contact status quick set: 寫一筆 contact_log, dashboard 立刻反映 */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-gray-500">聯絡</span>
+                      <select
+                        value={getCurrentContactStatus()}
+                        onChange={e => quickSetContactStatus(e.target.value as 'pending' | 'contacted' | 'rejected' | 'converted' | 'suspended')}
+                        disabled={!!selected.disabled_at}
+                        title={selected.disabled_at ? '已停用,需先恢復才能改狀態' : '點擊快速設定聯絡狀態 (寫入 contact_logs)'}
+                        className="text-xs px-1.5 py-0.5 border border-gray-300 rounded outline-none focus:ring-1 focus:ring-blue-400 bg-white cursor-pointer"
+                      >
+                        <option value="pending">⏳ 未聯絡</option>
+                        <option value="contacted">✓ 已聯絡</option>
+                        <option value="rejected">✗ 被拒</option>
+                        <option value="converted">🤝 轉合作</option>
+                        <option value="suspended">⏸ 暫停追蹤</option>
+                      </select>
+                    </div>
 
                     {/* priority radio: 點了直接 PUT 寫 DB 不 reload。NULL 預設顯示為 ③,所有店家 default=3。 */}
                     <div className="flex items-center gap-1 shrink-0 pl-2 border-l border-gray-300 ml-1">

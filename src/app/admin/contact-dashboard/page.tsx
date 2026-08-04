@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CONTACT_STATUSES, CONTACT_STATUS_LABELS, CONTACT_STATUS_COLORS } from '@/lib/taiwan-regions';
 
@@ -44,16 +45,14 @@ interface StatsResponse {
 type StatusKey = typeof CONTACT_STATUSES[number];
 
 function piePath(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  // Solid pie (no inner cutout) — simple wedge path
   const start = polarToCartesian(cx, cy, r, endAngle);
   const end = polarToCartesian(cx, cy, r, startAngle);
   const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-  const innerStart = polarToCartesian(cx, cy, r * 0.55, endAngle);
-  const innerEnd = polarToCartesian(cx, cy, r * 0.55, startAngle);
   return [
-    `M ${start.x} ${start.y}`,
+    `M ${cx} ${cy}`,
+    `L ${start.x} ${start.y}`,
     `A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`,
-    `L ${innerStart.x} ${innerStart.y}`,
-    `A ${r * 0.55} ${r * 0.55} 0 ${largeArcFlag} 1 ${innerEnd.x} ${innerEnd.y}`,
     'Z',
   ].join(' ');
 }
@@ -78,58 +77,80 @@ function PieChart({ data, total, onSelect }: { data: Record<StatusKey, number>; 
   const slices = CONTACT_STATUSES.map((s) => {
     const count = data[s] || 0;
     const pct = (count / total) * 100;
-    const slice = { status: s, count, pct, start: cumulative, end: cumulative + pct };
+    const midPct = cumulative + pct / 2;
+    const slice = { status: s, count, pct, start: cumulative, mid: midPct, end: cumulative + pct };
     cumulative += pct;
     return slice;
   }).filter((s) => s.count > 0);
 
   const cx = 60;
   const cy = 60;
-  const r = 44;
-  const strokeWidth = 22;
-  const circumference = 2 * Math.PI * r;
+  const r = 56;
 
-  // Calculate a small gap between segments for readability (in % of total)
-  const gap = slices.length > 1 ? 0.5 : 0;
+  // Hide labels for tiny segments (<8%) — too cramped
+  const MIN_PCT_FOR_LABEL = 8;
 
   return (
     <div className="flex flex-col items-center gap-3">
       <svg width="120" height="120" viewBox="0 0 120 120" className="overflow-visible">
-        {/* Donut style for all slices — draw each as stroke-dasharray circle */}
-        {slices.map((slice, i) => {
-          const pct = slice.end - slice.start;
-          const usablePct = Math.max(0, pct - gap);
-          const dashLength = (usablePct / 100) * circumference;
-          const dashGap = circumference - dashLength;
-          const offset = -((slice.start + gap / 2) / 100) * circumference;
+        {slices.map((slice) => {
+          const startAngle = (slice.start / 100) * 360;
+          const endAngle = (slice.end / 100) * 360;
+          if (slice.pct >= 99.99) {
+            // Full circle — use plain circle element
+            return (
+              <circle
+                key={slice.status}
+                cx={cx}
+                cy={cy}
+                r={r}
+                fill={CONTACT_STATUS_COLORS[slice.status]}
+                stroke="white"
+                strokeWidth={1}
+                opacity={selected && selected !== slice.status ? 0.4 : 1}
+                onClick={() => {
+                  setSelected(selected === slice.status ? null : slice.status);
+                  onSelect?.(slice.status);
+                }}
+                className="cursor-pointer transition-opacity hover:opacity-80"
+              />
+            );
+          }
           return (
-            <circle
-              key={slice.status}
-              cx={cx}
-              cy={cy}
-              r={r}
-              fill="none"
-              stroke={CONTACT_STATUS_COLORS[slice.status]}
-              strokeWidth={strokeWidth}
-              strokeDasharray={`${dashLength} ${dashGap}`}
-              strokeDashoffset={offset}
-              transform={`rotate(-90 ${cx} ${cy})`}
-              opacity={selected && selected !== slice.status ? 0.35 : 1}
+            <g key={slice.status} className="cursor-pointer"
               onClick={() => {
                 setSelected(selected === slice.status ? null : slice.status);
                 onSelect?.(slice.status);
-              }}
-              className="cursor-pointer transition-opacity hover:opacity-80"
-            />
+              }}>
+              <path
+                d={piePath(cx, cy, r, startAngle, endAngle)}
+                fill={CONTACT_STATUS_COLORS[slice.status]}
+                stroke="white"
+                strokeWidth={1}
+                opacity={selected && selected !== slice.status ? 0.4 : 1}
+                className="transition-opacity hover:opacity-80"
+              />
+              {/* % label inside segment if segment is big enough */}
+              {slice.pct >= MIN_PCT_FOR_LABEL && (() => {
+                const midAngle = (slice.mid / 100) * 360;
+                const labelR = r * 0.6;
+                const pos = polarToCartesian(cx, cy, labelR, midAngle);
+                return (
+                  <text
+                    x={pos.x}
+                    y={pos.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="text-[10px] font-semibold"
+                    fill="white"
+                  >
+                    {slice.pct.toFixed(0)}%
+                  </text>
+                );
+              })()}
+            </g>
           );
         })}
-        {/* Center label: total count */}
-        <text x={cx} y={cy + 4} textAnchor="middle" className="text-[14px] font-semibold fill-gray-700">
-          {total}
-        </text>
-        <text x={cx} y={cy - 12} textAnchor="middle" className="text-[10px] fill-gray-400">
-          總數
-        </text>
       </svg>
       <div className="text-xs text-gray-600 w-full">
         {CONTACT_STATUSES.map((s) => {
@@ -254,7 +275,12 @@ export default function ContactDashboardPage() {
       <div className="max-w-7xl mx-auto">
         {/* header */}
         <div className="flex items-baseline justify-between mb-6">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink-800">聯絡狀態</h1>
+          <div className="flex items-center gap-3">
+            <Link href="/admin" className="text-ink-500 hover:text-forest-700 transition-colors text-sm flex items-center gap-1" title="返回 CRM 後台">
+              ← 回 CRM
+            </Link>
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink-800">聯絡狀態</h1>
+          </div>
           <div className="text-xs text-ink-500">總店家 {visibleRegions.reduce((s, r) => s + r.total_restaurants, 0)} 間 · 更新於 {new Date(stats.generated_at).toLocaleString('zh-TW')}</div>
         </div>
 
@@ -340,10 +366,12 @@ export default function ContactDashboardPage() {
             <div className="flex items-end">
               <button
                 onClick={jumpToAdmin}
-                disabled={!cityFilter && !statusFilter && !districtFilter}
-                className="w-full px-4 py-2 rounded bg-forest-700 text-cream-50 text-sm font-medium hover:bg-forest-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                title={(!cityFilter && !statusFilter && !districtFilter) ? '不選篩選 → 看到全部店家' : '把現在篩選條件帶到 CRM'}
+                className="w-full px-4 py-2 rounded bg-forest-700 text-cream-50 text-sm font-medium hover:bg-forest-800 transition-colors"
               >
-                跳到店家列表
+                {(!cityFilter && !statusFilter && !districtFilter)
+                  ? '查看全部店家 →'
+                  : '跳到篩選結果 →'}
               </button>
             </div>
           </div>
