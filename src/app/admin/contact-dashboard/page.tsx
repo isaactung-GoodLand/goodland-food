@@ -85,40 +85,36 @@ function PieChart({ data, total, onSelect }: { data: Record<StatusKey, number>; 
 
   const cx = 60;
   const cy = 60;
-  const r = 50;
+  const r = 44;
+  const strokeWidth = 22;
+  const circumference = 2 * Math.PI * r;
+
+  // Calculate a small gap between segments for readability (in % of total)
+  const gap = slices.length > 1 ? 0.5 : 0;
 
   return (
     <div className="flex flex-col items-center gap-3">
       <svg width="120" height="120" viewBox="0 0 120 120" className="overflow-visible">
-        {slices.map((slice) => {
-          const startAngle = (slice.start / 100) * 360;
-          const endAngle = (slice.end / 100) * 360;
-          if (slice.end - slice.start >= 99.99) {
-            // Full circle - render as donut
-            return (
-              <circle
-                key={slice.status}
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill="none"
-                stroke={CONTACT_STATUS_COLORS[slice.status]}
-                strokeWidth="20"
-                opacity={selected && selected !== slice.status ? 0.4 : 1}
-                onClick={() => {
-                  setSelected(selected === slice.status ? null : slice.status);
-                  onSelect?.(slice.status);
-                }}
-                className="cursor-pointer transition-opacity"
-              />
-            );
-          }
+        {/* Donut style for all slices — draw each as stroke-dasharray circle */}
+        {slices.map((slice, i) => {
+          const pct = slice.end - slice.start;
+          const usablePct = Math.max(0, pct - gap);
+          const dashLength = (usablePct / 100) * circumference;
+          const dashGap = circumference - dashLength;
+          const offset = -((slice.start + gap / 2) / 100) * circumference;
           return (
-            <path
+            <circle
               key={slice.status}
-              d={piePath(cx, cy, r, startAngle, endAngle)}
-              fill={CONTACT_STATUS_COLORS[slice.status]}
-              opacity={selected && selected !== slice.status ? 0.4 : 1}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke={CONTACT_STATUS_COLORS[slice.status]}
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${dashLength} ${dashGap}`}
+              strokeDashoffset={offset}
+              transform={`rotate(-90 ${cx} ${cy})`}
+              opacity={selected && selected !== slice.status ? 0.35 : 1}
               onClick={() => {
                 setSelected(selected === slice.status ? null : slice.status);
                 onSelect?.(slice.status);
@@ -127,6 +123,13 @@ function PieChart({ data, total, onSelect }: { data: Record<StatusKey, number>; 
             />
           );
         })}
+        {/* Center label: total count */}
+        <text x={cx} y={cy + 4} textAnchor="middle" className="text-[14px] font-semibold fill-gray-700">
+          {total}
+        </text>
+        <text x={cx} y={cy - 12} textAnchor="middle" className="text-[10px] fill-gray-400">
+          總數
+        </text>
       </svg>
       <div className="text-xs text-gray-600 w-full">
         {CONTACT_STATUSES.map((s) => {
