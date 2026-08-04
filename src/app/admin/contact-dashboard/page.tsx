@@ -249,6 +249,17 @@ export default function ContactDashboardPage() {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // 把 dashboard 的 click 元素 (region / city / district) 翻成「在新分頁打開 CRM 篩選結果」
+  // 用 target=_blank + opener=self 確保新分頁有完整 URL
+  function buildAdminHref(params: Record<string, string>): string {
+    const qs = new URLSearchParams({ page_size: '500', ...params }).toString();
+    return `/admin?${qs}`;
+  }
+
+  function openInNewTab(href: string) {
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream-50">
@@ -284,30 +295,42 @@ export default function ContactDashboardPage() {
           <div className="text-xs text-ink-500">總店家 {visibleRegions.reduce((s, r) => s + r.total_restaurants, 0)} 間 · 更新於 {new Date(stats.generated_at).toLocaleString('zh-TW')}</div>
         </div>
 
-        {/* Top: 4 pie charts (北/中/南/東部離島), 含不明 */}
+        {/* Top: 4 pie charts (北/中/南/東部離島), 含不明 — 點 → 新分頁開 CRM region 篩選 */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          {visibleRegions.map((region) => (
-            <button
-              key={region.region_key}
-              onClick={() => scrollToRegion(region.region_key)}
-              className="bg-white rounded-lg p-4 border border-ink-100 hover:border-forest-700 transition-colors text-left"
-            >
-              <div className="font-serif text-base font-medium text-ink-800 mb-3">{region.region_label}</div>
-              <PieChart data={region.contacts} total={region.total_restaurants} />
-              <div className="text-xs text-ink-500 mt-2 text-center font-mono">{region.total_restaurants} 間</div>
-            </button>
-          ))}
-          {unknownRegion && unknownRegion.total_restaurants > 0 && (
-            <button
-              key="unknown"
-              onClick={() => scrollToRegion('unknown')}
-              className="bg-white rounded-lg p-4 border border-dashed border-gray-300 hover:border-gray-500 transition-colors text-left"
-            >
-              <div className="font-serif text-base font-medium text-ink-800 mb-3">{unknownRegion.region_label}</div>
-              <PieChart data={unknownRegion.contacts} total={unknownRegion.total_restaurants} />
-              <div className="text-xs text-ink-500 mt-2 text-center font-mono">{unknownRegion.total_restaurants} 間</div>
-            </button>
-          )}
+          {visibleRegions.map((region) => {
+            const href = buildAdminHref({ region: region.region_key, status: statusFilter });
+            return (
+              <a
+                key={region.region_key}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`在新視窗開啟 CRM, 篩選「${region.region_label}」${statusFilter ? ` + 聯絡狀態 ${statusFilter}` : ''}`}
+                className="bg-white rounded-lg p-4 border border-ink-100 hover:border-forest-700 transition-colors text-left block"
+              >
+                <div className="font-serif text-base font-medium text-ink-800 mb-3">{region.region_label}</div>
+                <PieChart data={region.contacts} total={region.total_restaurants} />
+                <div className="text-xs text-ink-500 mt-2 text-center font-mono">{region.total_restaurants} 間 ↗</div>
+              </a>
+            );
+          })}
+          {unknownRegion && unknownRegion.total_restaurants > 0 && (() => {
+            const href = buildAdminHref({ status: statusFilter });
+            return (
+              <a
+                key="unknown"
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="在新視窗開啟 CRM (篩選 全部, 包含縣市未明的店家)"
+                className="bg-white rounded-lg p-4 border border-dashed border-gray-300 hover:border-gray-500 transition-colors text-left block"
+              >
+                <div className="font-serif text-base font-medium text-ink-800 mb-3">{unknownRegion.region_label}</div>
+                <PieChart data={unknownRegion.contacts} total={unknownRegion.total_restaurants} />
+                <div className="text-xs text-ink-500 mt-2 text-center font-mono">{unknownRegion.total_restaurants} 間 ↗</div>
+              </a>
+            );
+          })()}
         </div>
 
         {/* 篩選器 (顯示 / 取消 用兩個 select 連動) */}
@@ -391,33 +414,57 @@ export default function ContactDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(region.cities)
                 .sort(([a], [b]) => a.localeCompare(b, 'zh-Hant-TW'))
-                .map(([cityName, city]) => (
-                  <div key={cityName} className="bg-white rounded-lg p-4 border border-ink-100">
-                    <div className="flex items-baseline justify-between mb-3">
-                      <h3 className="font-medium text-ink-800">{cityName}</h3>
-                      <span className="text-xs text-ink-500 font-mono">{city.total_restaurants} 間</span>
-                    </div>
-                    <PieChart data={city.contacts} total={city.total_restaurants} />
-                    <div className="mt-3 pt-3 border-t border-ink-100 space-y-1">
-                      {Object.entries(city.districts)
-                        .sort(([a], [b]) => a.localeCompare(b, 'zh-Hant-TW'))
-                        .map(([districtName, district]) => (
-                          <button
-                            key={districtName}
-                            onClick={() => {
-                              setCityFilter(cityName);
-                              setDistrictFilter(districtName);
-                              setStatusFilter(statusFilter);
-                            }}
-                            className="w-full flex items-center justify-between px-2 py-1 text-xs hover:bg-cream-100 rounded transition-colors"
+                .map(([cityName, city]) => {
+                  const cityHref = buildAdminHref({
+                    region: region.region_key,
+                    city: cityName,
+                    status: statusFilter,
+                  });
+                  return (
+                    <div key={cityName} className="bg-white rounded-lg p-4 border border-ink-100">
+                      <div className="flex items-baseline justify-between mb-3">
+                        <h3 className="font-medium text-ink-800">
+                          <a
+                            href={cityHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`在新視窗開啟 CRM, 篩選「${cityName}」`}
+                            className="hover:text-forest-700 hover:underline transition-colors"
                           >
-                            <span className="text-ink-700">{districtName}</span>
-                            <span className="font-mono text-ink-500">{district.total_restaurants}</span>
-                          </button>
-                        ))}
+                            {cityName} ↗
+                          </a>
+                        </h3>
+                        <span className="text-xs text-ink-500 font-mono">{city.total_restaurants} 間</span>
+                      </div>
+                      <PieChart data={city.contacts} total={city.total_restaurants} />
+                      <div className="mt-3 pt-3 border-t border-ink-100 space-y-1">
+                        {Object.entries(city.districts)
+                          .sort(([a], [b]) => a.localeCompare(b, 'zh-Hant-TW'))
+                          .map(([districtName, district]) => {
+                            const href = buildAdminHref({
+                              region: region.region_key,
+                              city: cityName,
+                              district: districtName,
+                              status: statusFilter,
+                            });
+                            return (
+                              <a
+                                key={districtName}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`在新視窗開啟 CRM, 篩選「${cityName}${districtName}」${statusFilter ? ` + 聯絡狀態 ${statusFilter}` : ''}`}
+                                className="w-full flex items-center justify-between px-2 py-1 text-xs hover:bg-cream-100 rounded transition-colors"
+                              >
+                                <span className="text-ink-700">{districtName}</span>
+                                <span className="font-mono text-ink-500">{district.total_restaurants}</span>
+                              </a>
+                            );
+                          })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </section>
         ))}
