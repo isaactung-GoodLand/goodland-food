@@ -48,9 +48,12 @@ export async function GET(request: Request) {
     paramIndex++;
   }
 
+  // 過濾器: 選 contact status 自動 include disabled 店家
+  // (因為 disabled_at 不為 null 的店家可能是 suspended)
+  const forceIncludeDisabled = !!status;
   if (onlyDisabled) {
     whereParts.push(`disabled_at IS NOT NULL`);
-  } else if (!includeDisabled) {
+  } else if (!includeDisabled && !forceIncludeDisabled) {
     whereParts.push(`disabled_at IS NULL`);
   }
 

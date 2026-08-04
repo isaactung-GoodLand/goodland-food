@@ -43,11 +43,10 @@ const EMPTY_CONTACTS: Record<string, number> = {};
 for (const s of CONTACT_STATUSES) EMPTY_CONTACTS[s] = 0;
 
 export async function GET() {
-  // 1. 取所有 active 店家 + district
+  // 1. 取所有店家 (含 disabled, 因為 disabled 店家也應該算成 suspended bucket)
   const restaurantsRes = await pool.query(
-    `SELECT id, city, district
-     FROM restaurants
-     WHERE disabled_at IS NULL`
+    `SELECT id, city, district, disabled_at
+     FROM restaurants`
   );
 
   // 2. 取所有 contact_logs (不只 status NOT NULL, 因為我們用「有 notes」的規則)
@@ -106,7 +105,7 @@ export async function GET() {
 
   // 3. iterate restaurants — 把每家店歸到 region → city → district
   // 同時把它的「最新聯絡狀態」 increment
-  for (const r of restaurantsRes.rows as Array<{ id: number; city: string | null; district: string | null }>) {
+  for (const r of restaurantsRes.rows as Array<{ id: number; city: string | null; district: string | null; disabled_at: string | null }>) {
     // determine region
     let regionKey: string = 'unknown';
     if (r.city) {
@@ -148,14 +147,17 @@ export async function GET() {
     cityNode.total_restaurants++;
     districtNode.total_restaurants++;
 
-    // contact status: 最新一筆 log 的 status, 但特殊規則:
-    //   有 notes (非空) → 視為「已聯絡」,覆寫原本 status
-    //   沒任何 contact_logs → pending
+    // contact status: 規則 (priority 高 → 低)
+    //   1. disabled_at IS NOT NULL → 'suspended' (店家停用了, 不論聯絡狀態)
+    //   2. 最新 log 有 notes → 'contacted' (覆寫 status)
+    //   3. 最新 log 有 status → 沿用
+    //   4. 沒任何 log → 'pending'
     const latest = latestByRestaurant.get(r.id);
     let effectiveStatus: 'pending' | 'contacted' | 'rejected' | 'converted' | 'suspended' = 'pending';
-    if (latest) {
+    if (r.disabled_at) {
+      effectiveStatus = 'suspended';
+    } else if (latest) {
       const status = latest.status as 'contacted' | 'rejected' | 'converted' | 'suspended' | null;
-      // 規則: 有 notes 就當「已聯絡」
       if (latest.notes && latest.notes.trim() !== '') {
         effectiveStatus = 'contacted';
       } else if (status && ['contacted', 'rejected', 'converted', 'suspended'].includes(status)) {
@@ -163,19 +165,15 @@ export async function GET() {
       } else {
         effectiveStatus = 'pending';
       }
-      regionNode.contacts[effectiveStatus]++;
-      cityNode.contacts[effectiveStatus]++;
-      districtNode.contacts[effectiveStatus]++;
       const ts = latest.contact_date || latest.created_at;
       if (!regionNode.last_contact_at || ts > regionNode.last_contact_at) regionNode.last_contact_at = ts;
       if (!cityNode.last_contact_at || ts > cityNode.last_contact_at) cityNode.last_contact_at = ts;
       if (!districtNode.last_contact_at || ts > districtNode.last_contact_at) districtNode.last_contact_at = ts;
-    } else {
-      // 沒任何 contact_logs → 全算 pending
-      regionNode.contacts['pending']++;
-      cityNode.contacts['pending']++;
-      districtNode.contacts['pending']++;
     }
+
+    regionNode.contacts[effectiveStatus]++;
+    cityNode.contacts[effectiveStatus]++;
+    districtNode.contacts[effectiveStatus]++;
   }
 
   return Response.json({
