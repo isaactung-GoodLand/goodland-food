@@ -1,0 +1,714 @@
+{
+  "plans": {
+    "A": {
+      "name": "Plan A — 5 天西部版",
+      "days": [
+        {
+          "day": 1,
+          "date": "8/9 (日)",
+          "route": "新竹 → 嘉義 (西部縱貫)",
+          "lodging": "嘉義市",
+          "stores": [
+            [
+              "為食貓香港茶餐廳",
+              "彰化"
+            ],
+            [
+              "八玖鼎港式飲茶員林店",
+              "彰化"
+            ],
+            [
+              "龍點居",
+              "彰化"
+            ],
+            [
+              "喜喜茶室",
+              "彰化"
+            ],
+            [
+              "喫茶點彰化延平店",
+              "彰化"
+            ],
+            [
+              "阿杜港式茶樓",
+              "南投"
+            ],
+            [
+              "李記拾粤茶餐館",
+              "南投"
+            ],
+            [
+              "九好港式飲茶",
+              "南投"
+            ],
+            [
+              "龍太極港式茶點",
+              "南投"
+            ],
+            [
+              "早茶食光港式點心",
+              "雲林"
+            ],
+            [
+              "雲林100碗 耕雲軒港式餐廳",
+              "雲林"
+            ],
+            [
+              "維多利亞小屋",
+              "雲林"
+            ],
+            [
+              "為食貓香港茶餐廳",
+              "雲林"
+            ],
+            [
+              "好正點港式飲茶 嘉義店",
+              "嘉義"
+            ],
+            [
+              "楓茶記嘉義中山店",
+              "嘉義"
+            ],
+            [
+              "竹居茶樓",
+              "嘉義"
+            ],
+            [
+              "港嘢",
+              "嘉義"
+            ],
+            [
+              "給給茶記 kapkapchakee",
+              "嘉義"
+            ],
+            [
+              "為食貓香港茶餐廳",
+              "嘉義"
+            ]
+          ],
+          "note": "19 家極密集,建議純打招呼+留 DM,不坐下來吃"
+        },
+        {
+          "day": 2,
+          "date": "8/10 (一)",
+          "route": "嘉義 → 高雄",
+          "lodging": "高雄",
+          "stores": [
+            [
+              "鑫華茶餐廳",
+              "台南"
+            ],
+            [
+              "小香港茶餐廳",
+              "台南"
+            ],
+            [
+              "港悅港式飲茶",
+              "台南"
+            ],
+            [
+              "甲桂林港式茶餐廳",
+              "台南"
+            ],
+            [
+              "好正點港式飲茶 三多店",
+              "高雄"
+            ],
+            [
+              "翰品酒店高雄 港都茶樓",
+              "高雄"
+            ],
+            [
+              "翠王香港茶餐廳",
+              "高雄"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 3,
+          "date": "8/11 (二)",
+          "route": "高雄 → 屏東",
+          "lodging": "屏東潮州",
+          "stores": [
+            [
+              "湘湘港式宵夜 屏東重慶店",
+              "屏東"
+            ],
+            [
+              "湘湘港式茶餐廳 屏東建民店",
+              "屏東"
+            ],
+            [
+              "東悅坊港式飲茶 高雄店",
+              "屏東"
+            ],
+            [
+              "潮點茶餐廳",
+              "屏東"
+            ],
+            [
+              "好正點港式點心 屏東店",
+              "屏東"
+            ],
+            [
+              "茶點壹室",
+              "屏東"
+            ],
+            [
+              "鴻欣茶記",
+              "屏東"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 4,
+          "date": "8/12 (三)",
+          "route": "屏東 → 宜蘭 (跨山 5hr)",
+          "lodging": "宜蘭",
+          "stores": [
+            [
+              "喜粵港式餐廳 宜蘭創始店",
+              "宜蘭"
+            ],
+            [
+              "行運茶餐",
+              "宜蘭"
+            ],
+            [
+              "吃飽沒事乾港式茶餐廳",
+              "宜蘭"
+            ],
+            [
+              "香港城餐廳",
+              "宜蘭"
+            ],
+            [
+              "茶宴",
+              "宜蘭"
+            ]
+          ],
+          "note": "當天跨山 5hr,實際只能拜 1-3 家,5 家跑不完"
+        },
+        {
+          "day": 5,
+          "date": "8/13 (四)",
+          "route": "宜蘭 → 新竹 (含苗栗)",
+          "lodging": "(回家)",
+          "stores": [
+            [
+              "九龍城香港茶 白沙屯媽祖店",
+              "苗栗"
+            ]
+          ],
+          "note": ""
+        }
+      ]
+    },
+    "B": {
+      "name": "Plan B — 7 天完整版",
+      "days": [
+        {
+          "day": 1,
+          "date": "8/9 (日)",
+          "route": "新竹 → 集集",
+          "lodging": "南投水里/集集",
+          "stores": [
+            [
+              "為食貓香港茶餐廳",
+              "彰化"
+            ],
+            [
+              "八玖鼎港式飲茶員林店",
+              "彰化"
+            ],
+            [
+              "龍點居",
+              "彰化"
+            ],
+            [
+              "喜喜茶室",
+              "彰化"
+            ],
+            [
+              "喫茶點彰化延平店",
+              "彰化"
+            ],
+            [
+              "阿杜港式茶樓",
+              "南投"
+            ],
+            [
+              "李記拾粤茶餐館",
+              "南投"
+            ],
+            [
+              "九好港式飲茶",
+              "南投"
+            ],
+            [
+              "龍太極港式茶點",
+              "南投"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 2,
+          "date": "8/10 (一)",
+          "route": "集集 → 嘉義",
+          "lodging": "嘉義市",
+          "stores": [
+            [
+              "早茶食光港式點心",
+              "雲林"
+            ],
+            [
+              "雲林100碗 耕雲軒港式餐廳",
+              "雲林"
+            ],
+            [
+              "維多利亞小屋",
+              "雲林"
+            ],
+            [
+              "為食貓香港茶餐廳",
+              "雲林"
+            ],
+            [
+              "好正點港式飲茶 嘉義店",
+              "嘉義"
+            ],
+            [
+              "楓茶記嘉義中山店",
+              "嘉義"
+            ],
+            [
+              "竹居茶樓",
+              "嘉義"
+            ],
+            [
+              "港嘢",
+              "嘉義"
+            ],
+            [
+              "給給茶記 kapkapchakee",
+              "嘉義"
+            ],
+            [
+              "為食貓香港茶餐廳",
+              "嘉義"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 3,
+          "date": "8/11 (二)",
+          "route": "嘉義 → 高雄",
+          "lodging": "高雄",
+          "stores": [
+            [
+              "鑫華茶餐廳",
+              "台南"
+            ],
+            [
+              "小香港茶餐廳",
+              "台南"
+            ],
+            [
+              "港悅港式飲茶",
+              "台南"
+            ],
+            [
+              "甲桂林港式茶餐廳",
+              "台南"
+            ],
+            [
+              "好正點港式飲茶 三多店",
+              "高雄"
+            ],
+            [
+              "翰品酒店高雄 港都茶樓",
+              "高雄"
+            ],
+            [
+              "翠王香港茶餐廳",
+              "高雄"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 4,
+          "date": "8/12 (三)",
+          "route": "高雄 → 屏東",
+          "lodging": "屏東潮州",
+          "stores": [
+            [
+              "湘湘港式宵夜 屏東重慶店",
+              "屏東"
+            ],
+            [
+              "湘湘港式茶餐廳 屏東建民店",
+              "屏東"
+            ],
+            [
+              "東悅坊港式飲茶 高雄店",
+              "屏東"
+            ],
+            [
+              "潮點茶餐廳",
+              "屏東"
+            ],
+            [
+              "好正點港式點心 屏東店",
+              "屏東"
+            ],
+            [
+              "茶點壹室",
+              "屏東"
+            ],
+            [
+              "鴻欣茶記",
+              "屏東"
+            ]
+          ],
+          "note": ""
+        },
+        {
+          "day": 5,
+          "date": "8/13 (四)",
+          "route": "屏東 → 台東 (南迴 3hr)",
+          "lodging": "台東池上/卑南",
+          "stores": [
+            [
+              "安迪廚房香港茶餐廳料理",
+              "台東"
+            ],
+            [
+              "茶自點 台東旗艦店",
+              "台東"
+            ],
+            [
+              "機關車庫 Tea House 1917",
+              "台東"
+            ],
+            [
+              "台東桂田喜來登酒店 好也粵式中餐廳",
+              "台東"
+            ],
+            [
+              "1975 港味廚房",
+              "台東"
+            ]
+          ],
+          "note": "南迴跨山 3hr,但台東 5 家都集中,可行"
+        },
+        {
+          "day": 6,
+          "date": "8/14 (五)",
+          "route": "台東 → 花蓮 → 宜蘭 (蘇花改 2.5hr)",
+          "lodging": "宜蘭",
+          "stores": [
+            [
+              "港飲港食茶餐廳",
+              "花蓮"
+            ],
+            [
+              "好正點港式點心 洄瀾廣場",
+              "花蓮"
+            ],
+            [
+              "美好餐室",
+              "花蓮"
+            ],
+            [
+              "王記茶舖人文茶堂 中山店",
+              "花蓮"
+            ],
+            [
+              "喜粵港式餐廳 宜蘭創始店",
+              "宜蘭"
+            ],
+            [
+              "行運茶餐",
+              "宜蘭"
+            ],
+            [
+              "吃飽沒事乾港式茶餐廳",
+              "宜蘭"
+            ],
+            [
+              "香港城餐廳",
+              "宜蘭"
+            ],
+            [
+              "茶宴",
+              "宜蘭"
+            ]
+          ],
+          "note": "當天 9 家,花蓮 4 家 + 宜蘭 5 家,宜蘭每家 36 分鐘,趕但可行"
+        },
+        {
+          "day": 7,
+          "date": "8/15 (六)",
+          "route": "宜蘭 → 新竹 (含苗栗)",
+          "lodging": "(回家)",
+          "stores": [
+            [
+              "九龍城香港茶 白沙屯媽祖店",
+              "苗栗"
+            ]
+          ],
+          "note": ""
+        }
+      ]
+    }
+  },
+  "lodging": [
+    {
+      "city": "南投水里/集集",
+      "type": "hotel",
+      "name": "水里民宿",
+      "address": "南投縣水里鄉",
+      "price": "$1500-2000",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E6%B0%B4%E9%87%8C",
+      "maps_url": ""
+    },
+    {
+      "city": "南投水里/集集",
+      "type": "hotel",
+      "name": "集集民宿",
+      "address": "南投縣集集鎮",
+      "price": "$1200-1800",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E9%9B%86%E9%9B%86",
+      "maps_url": ""
+    },
+    {
+      "city": "嘉義市",
+      "type": "hotel",
+      "name": "蘭桂坊花園酒店",
+      "address": "嘉義市西區",
+      "price": "$1800-2200",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E5%98%89%E7%BE%A9+%E8%98%AD%E6%A1%82%E5%9D%8A",
+      "maps_url": ""
+    },
+    {
+      "city": "嘉義市",
+      "type": "hotel",
+      "name": "嘉義觀止",
+      "address": "嘉義市東區",
+      "price": "$2000-2400",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E5%98%89%E7%BE%A9%E8%A7%80%E6%AD%A2",
+      "maps_url": ""
+    },
+    {
+      "city": "高雄",
+      "type": "hotel",
+      "name": "翰品酒店高雄",
+      "address": "高雄市鹽埕區",
+      "price": "$2000-2400",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/chateau-de-chine-kaohsiung.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "高雄",
+      "type": "hotel",
+      "name": "漢來大飯店",
+      "address": "高雄市前金區",
+      "price": "$2200-2500",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/grand-hi-lai.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "屏東潮州",
+      "type": "hotel",
+      "name": "潮州綠舍背包客棧",
+      "address": "屏東縣潮州鎮",
+      "price": "$600-800",
+      "rating": "",
+      "facility": "",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/屏東潮州+背包客棧"
+    },
+    {
+      "city": "台東池上/卑南",
+      "type": "hotel",
+      "name": "池上日暉國際渡假村",
+      "address": "台東縣池上鄉",
+      "price": "$2400-2800 (略超)",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E6%B1%A0%E4%B8%8A",
+      "maps_url": ""
+    },
+    {
+      "city": "台東池上/卑南",
+      "type": "hotel",
+      "name": "桂田喜來登酒店",
+      "address": "台東市卑南鄉",
+      "price": "$2400-2800 (略超)",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/sheraton-taitung.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "花蓮壽豐",
+      "type": "hotel",
+      "name": "花蓮民宿",
+      "address": "花蓮縣壽豐鄉",
+      "price": "$1500-2200",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/searchresults.zh-tw.html?ss=%E5%A3%BD%E8%B1%90",
+      "maps_url": ""
+    },
+    {
+      "city": "宜蘭",
+      "type": "hotel",
+      "name": "煙波大飯店宜蘭館",
+      "address": "宜蘭縣礁溪鄉",
+      "price": "$2000-2400",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/lakeshore-hotel-yilan.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "宜蘭",
+      "type": "hotel",
+      "name": "蘭城晶英酒店",
+      "address": "宜蘭市民權路",
+      "price": "$3000-3500 (超預算)",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/lan-ching.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "宜蘭",
+      "type": "hotel",
+      "name": "綠舞觀光飯店",
+      "address": "宜蘭縣五結鄉",
+      "price": "$2400-2800 (略超)",
+      "rating": "",
+      "facility": "",
+      "booking_url": "https://www.booking.com/hotel/tw/green-land.zh-tw.html",
+      "maps_url": ""
+    },
+    {
+      "city": "南投水里/集集",
+      "type": "car_spot",
+      "name": "車埕停車場",
+      "address": "南投縣水里鄉車埕村",
+      "price": "免費",
+      "rating": "4.4",
+      "facility": "水:✅ 電:⚠️ 淋浴:❌ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/車埕停車場"
+    },
+    {
+      "city": "雲林古坑",
+      "type": "car_spot",
+      "name": "古坑綠色隧道停車場",
+      "address": "雲林縣古坑鄉",
+      "price": "免費",
+      "rating": "4.2",
+      "facility": "水:✅ 電:❌ 淋浴:❌ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/古坑綠色隧道停車場"
+    },
+    {
+      "city": "嘉義市",
+      "type": "car_spot",
+      "name": "仁義潭水庫停車場",
+      "address": "嘉義縣番路鄉",
+      "price": "免費",
+      "rating": "4.3",
+      "facility": "水:✅ 電:❌ 淋浴:❌ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/仁義潭水庫+停車場"
+    },
+    {
+      "city": "高雄",
+      "type": "car_spot",
+      "name": "衛武營藝術中心停車場",
+      "address": "高雄市苓雅區",
+      "price": "免費",
+      "rating": "4.6",
+      "facility": "水:✅ 電:⚠️ 淋浴:❌ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/衛武營+停車場"
+    },
+    {
+      "city": "屏東潮州",
+      "type": "car_spot",
+      "name": "林後四林平地森林園區",
+      "address": "920屏東縣潮州鎮潮義路221-1號",
+      "price": "免費",
+      "rating": "4.5",
+      "facility": "水:✅ 電:✅ 淋浴:✅ 戶外 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://maps.google.com/?q=林後四林平地森林園區"
+    },
+    {
+      "city": "屏東潮州",
+      "type": "car_spot",
+      "name": "潮州綠舍背包客棧 (車宿區)",
+      "address": "屏東縣潮州鎮",
+      "price": "~$600",
+      "rating": "4.4",
+      "facility": "水:✅ 電:✅ 淋浴:✅ 熱水 廁所:✅ 冷氣",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/屏東潮州+背包客棧"
+    },
+    {
+      "city": "宜蘭",
+      "type": "car_spot",
+      "name": "武荖坑風景區",
+      "address": "270宜蘭縣蘇澳鎮武荖坑路75號",
+      "price": "免費",
+      "rating": "4.2",
+      "facility": "水:✅ 電:✅ 淋浴:✅ 戶外 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://maps.google.com/?q=武荖坑風景區"
+    },
+    {
+      "city": "宜蘭",
+      "type": "car_spot",
+      "name": "羅東林業文化園區",
+      "address": "宜蘭縣羅東鎮",
+      "price": "免費",
+      "rating": "4.3",
+      "facility": "水:✅ 電:❌ 淋浴:❌ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/羅東林業文化園區+停車場"
+    },
+    {
+      "city": "苗栗通霄",
+      "type": "car_spot",
+      "name": "通霄海水浴場停車場",
+      "address": "苗栗縣通霄鎮",
+      "price": "免費",
+      "rating": "4.0",
+      "facility": "水:✅ 電:❌ 淋浴:⚠️ 廁所:✅",
+      "booking_url": "",
+      "maps_url": "https://www.google.com/maps/search/通霄海水浴場+停車場"
+    }
+  ]
+}
