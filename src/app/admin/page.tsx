@@ -612,6 +612,7 @@ export default function AdminCRM() {
             <div className="flex items-center gap-2">
               <Link href="/admin/tracking" className="text-xs text-gray-400 hover:text-blue-600" title="追蹤名單">📋</Link>
               <Link href="/admin/contact-dashboard" className="text-xs text-gray-400 hover:text-purple-600" title="聯絡狀態儀表板">📊</Link>
+              <Link href="/admin/duplicates" className="text-xs text-gray-400 hover:text-amber-600" title="CRM 重複偵測">🔗</Link>
               <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-600" title="登出">🚪</button>
               <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-700" title="設定">⚙</Link>
             </div>
