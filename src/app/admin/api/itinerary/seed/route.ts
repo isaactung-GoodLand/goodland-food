@@ -19,25 +19,34 @@ export async function POST() {
     let storeCount = 0;
     let lodgingCount = 0;
 
-    // Seed stores
+    // Seed stores (C: 跨日同名店家合併到第一次出現的那天,visit_order 重新編號)
+    const seenStoreNames = new Set<string>();
     for (const [planKey, plan] of Object.entries(data.plans) as [string, any][]) {
-      let visitOrder = 0;
+      // 先收集要保留的 (plan, day, visit_order, store_name, ...)
+      const entries: Array<{ day: number; storeName: string; city: string }> = [];
       for (const day of plan.days) {
         for (const [storeName, city] of day.stores as [string, string][]) {
-          visitOrder++;
-          const googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(storeName)}`;
-          const crmUrl = `/admin?q=${encodeURIComponent(storeName)}`;
-
-          const res = await pool.query(
-            `INSERT INTO hk_itinerary_stores
-              (plan, day, visit_order, store_name, store_address, google_maps_url, crm_url, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
-             ON CONFLICT (plan, day, visit_order) DO NOTHING
-             RETURNING id`,
-            [planKey, day.day, visitOrder, storeName, `${city}`, googleMapsUrl, crmUrl]
-          );
-          if (res.rowCount && res.rowCount > 0) storeCount++;
+          if (seenStoreNames.has(storeName)) continue; // 跳過重複
+          seenStoreNames.add(storeName);
+          entries.push({ day: day.day, storeName, city });
         }
+      }
+
+      let visitOrder = 0;
+      for (const { day, storeName, city } of entries) {
+        visitOrder++;
+        const googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(storeName)}`;
+        const crmUrl = `/admin?q=${encodeURIComponent(storeName)}`;
+
+        const res = await pool.query(
+          `INSERT INTO hk_itinerary_stores
+            (plan, day, visit_order, store_name, store_address, google_maps_url, crm_url, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+           ON CONFLICT (plan, day, visit_order) DO NOTHING
+           RETURNING id`,
+          [planKey, day, visitOrder, storeName, city, googleMapsUrl, crmUrl]
+        );
+        if (res.rowCount && res.rowCount > 0) storeCount++;
       }
     }
 
