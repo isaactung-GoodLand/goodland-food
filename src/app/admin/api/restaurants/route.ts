@@ -58,12 +58,13 @@ export async function GET(request: Request) {
   }
 
   // OR filters: show shops that HAVE at least one of the missing contact info
+  // 例外: 當有 q search 時, 放寬 filter (user 找特定店時,聯絡資料不該是阻擋條件)
   const orConditions: string[] = [];
-  if (hasPhone) orConditions.push(`phone IS NOT NULL AND phone != ''`);
-  if (hasFacebook) orConditions.push(`facebook IS NOT NULL AND facebook != ''`);
-  if (hasInstagram) orConditions.push(`instagram IS NOT NULL AND instagram != ''`);
-  if (hasLine) orConditions.push(`line IS NOT NULL AND line != ''`);
-  if (hasGmaps) orConditions.push(`gmaps_url IS NOT NULL AND gmaps_url != ''`);
+  if (hasPhone && !q) orConditions.push(`phone IS NOT NULL AND phone != ''`);
+  if (hasFacebook && !q) orConditions.push(`facebook IS NOT NULL AND facebook != ''`);
+  if (hasInstagram && !q) orConditions.push(`instagram IS NOT NULL AND instagram != ''`);
+  if (hasLine && !q) orConditions.push(`line IS NOT NULL AND line != ''`);
+  if (hasGmaps && !q) orConditions.push(`gmaps_url IS NOT NULL AND gmaps_url != ''`);
   if (orConditions.length > 0) {
     whereParts.push(`(${orConditions.join(' OR ')})`);
   }
