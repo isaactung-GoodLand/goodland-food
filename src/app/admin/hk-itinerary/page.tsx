@@ -213,7 +213,13 @@ function HkItineraryPage() {
 
         {/* Days */}
         {days.map((d) => {
-          const dayStores = storesByDay[d];
+          const dayStores = [...storesByDay[d]].sort((a, b) => {
+            // 跳過的排到最後面 (按 visit_order 維持原序)
+            const aSkipped = a.status === 'skipped' ? 1 : 0;
+            const bSkipped = b.status === 'skipped' ? 1 : 0;
+            if (aSkipped !== bSkipped) return aSkipped - bSkipped;
+            return a.visit_order - b.visit_order;
+          });
           const lodgingCity = dayStores[0]?.store_address || '';
           return (
             <div key={d} className="bg-white rounded-lg shadow-sm border border-stone-200 mb-4 p-4">
