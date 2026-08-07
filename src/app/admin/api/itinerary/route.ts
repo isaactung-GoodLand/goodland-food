@@ -18,9 +18,47 @@ export async function GET(request: Request) {
       'SELECT * FROM hk_lodging_options WHERE enabled = TRUE ORDER BY city, type, display_order, id'
     );
 
+    // Audit: 對每個店家找 CRM restaurant_id + city mismatch
+    // 一次 SQL JOIN 撈全部,避免 N+1
+    const auditRes = await pool.query(`
+      SELECT
+        s.id AS store_id,
+        s.store_name AS hk_name,
+        s.store_address AS hk_city,
+        r.id AS restaurant_id,
+        r.name AS crm_name,
+        r.city AS crm_city
+      FROM hk_itinerary_stores s
+      LEFT JOIN restaurants r
+        ON LOWER(TRIM(r.name)) = LOWER(TRIM(s.store_name))
+        AND r.disabled_at IS NULL
+      ${plan ? 'WHERE s.plan = $1' : ''}
+    `, plan ? [plan] : []);
+
+    const auditMap: Record<number, {
+      restaurant_id: number | null;
+      crm_name: string | null;
+      crm_city: string | null;
+      city_mismatch: boolean;
+      not_in_crm: boolean;
+    }> = {};
+    for (const row of auditRes.rows) {
+      const notInCrm = row.restaurant_id === null;
+      const cityMismatch = !notInCrm && row.crm_city && row.hk_city &&
+        !row.crm_city.includes(row.hk_city) && !row.hk_city.includes(row.crm_city.replace(/[縣市]/g, ''));
+      auditMap[row.store_id] = {
+        restaurant_id: row.restaurant_id,
+        crm_name: row.crm_name,
+        crm_city: row.crm_city,
+        city_mismatch: !!cityMismatch,
+        not_in_crm: notInCrm
+      };
+    }
+
     return Response.json({
       stores: storesRes.rows,
       lodging: lodgingRes.rows,
+      audit: auditMap,
     });
   } catch (e: any) {
     return Response.json({ error: e.message }, { status: 500 });
@@ -61,7 +99,71 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Store not found' }, { status: 404 });
     }
 
-    return Response.json(res.rows[0]);
+    const updated = res.rows[0];
+
+    // 若 status = visited, 同步寫 contact_log 到 CRM
+    // 跳過/歇業/未拜訪 → 不寫 contact_log
+    let syncedContactLogId: number | null = null;
+    let matchedRestaurant: { id: number; name: string } | null = null;
+
+    if (cleanStatus === 'visited') {
+      // 從 hk_itinerary_stores.store_name + store_address 找 CRM restaurant_id
+      // 對應策略:
+      //   1. 先嘗試嚴格比對 (店名 + 城市 LIKE)
+      //   2. 失敗再用 fuzzy 4 字比對 + 同縣市
+      const exactMatch = await pool.query(
+        `SELECT id, name, city FROM restaurants
+         WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+           AND disabled_at IS NULL
+         LIMIT 1`,
+        [updated.store_name]
+      );
+
+      let matchRes = exactMatch;
+
+      if (matchRes.rows.length === 0) {
+        // Fuzzy: 用店名前 4 字 + store_address 縣市模糊比對
+        const matchKey = updated.store_name.replace(/[港式飲茶餐廳店樓館坊軒]/g, '').slice(0, 4) || updated.store_name.slice(0, 4);
+        const addressPrefix = (updated.store_address || '').slice(0, 2); // 「屏東」、「彰化」、「嘉義」等
+
+        matchRes = await pool.query(
+          `SELECT id, name, city FROM restaurants
+           WHERE LOWER(TRIM(name)) LIKE LOWER($1)
+             AND disabled_at IS NULL
+             AND ($2 = '' OR LOWER(city) LIKE LOWER($2) OR LOWER(city) LIKE LOWER($3))
+           ORDER BY id
+           LIMIT 1`,
+          [`%${matchKey}%`, `%${addressPrefix}%`, `%${addressPrefix.replace(/[縣市]/g, '')}%`]
+        );
+      }
+
+      if (matchRes.rows.length > 0) {
+        const r = matchRes.rows[0];
+        matchedRestaurant = { id: r.id, name: r.name };
+
+        // 寫 contact_log (使用 raw SQL 跳過 disabled 守門)
+        const contactLogRes = await pool.query(
+          `INSERT INTO contact_logs (restaurant_id, contact_type, notes, contact_date, status)
+           VALUES ($1, $2, $3, NOW(), $4)
+           RETURNING id`,
+          [
+            r.id,
+            'walkin',
+            updated.notes ? `[hk-itinerary ${updated.plan} D${updated.day}] ${updated.notes}` : `[hk-itinerary ${updated.plan} D${updated.day}] 已拜訪`,
+            'contacted',
+          ]
+        );
+        syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
+      }
+    }
+
+    return Response.json({
+      ...updated,
+      synced: {
+        contact_log_id: syncedContactLogId,
+        restaurant: matchedRestaurant,
+      },
+    });
   } catch (e: any) {
     return Response.json({ error: e.message }, { status: 500 });
   }

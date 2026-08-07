@@ -69,6 +69,7 @@ function HkItineraryPage() {
   const plan = (searchParams.get('plan') || 'A') as 'A' | 'B';
 
   const [stores, setStores] = useState<Store[]>([]);
+  const [audit, setAudit] = useState<Record<number, any>>({});
   const [lodging, setLodging] = useState<Lodging[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +84,7 @@ function HkItineraryPage() {
       const data = await r.json();
       if (data.error) throw new Error(data.error);
       setStores(data.stores || []);
+      setAudit(data.audit || {});
       setLodging(data.lodging || []);
     } catch (e: any) {
       setError(e.message);
@@ -245,10 +247,33 @@ function HkItineraryPage() {
                             href={s.google_maps_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-blue-700 underline font-medium"
+                            className={`font-medium underline ${
+                              audit[s.id]?.not_in_crm
+                                ? 'text-red-700'
+                                : audit[s.id]?.city_mismatch
+                                ? 'text-amber-700'
+                                : 'text-blue-700'
+                            }`}
+                            title={
+                              audit[s.id]?.not_in_crm
+                                ? `⚠️ CRM 找不到「${s.store_name}」`
+                                : audit[s.id]?.city_mismatch
+                                ? `⚠️ 行程標 ${s.store_address},但 CRM 在 ${audit[s.id]?.crm_city}`
+                                : `✓ CRM 對應到 #${audit[s.id]?.restaurant_id}`
+                            }
                           >
                             {s.store_name}
                           </a>
+                        )}
+                        {audit[s.id]?.city_mismatch && (
+                          <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
+                            行程:{s.store_address} | CRM:{audit[s.id]?.crm_city}
+                          </span>
+                        )}
+                        {audit[s.id]?.not_in_crm && (
+                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded">
+                            CRM 無此店
+                          </span>
                         )}
                         {s.crm_url && (
                           <a

@@ -19,14 +19,14 @@ export async function POST() {
     let storeCount = 0;
     let lodgingCount = 0;
 
-    // Seed stores (C: 跨日同名店家合併到第一次出現的那天,visit_order 重新編號)
-    const seenStoreNames = new Set<string>();
+    // Seed stores (C: 同 plan 內跨日同名店家合併到第一次出現的那天,visit_order 重新編號)
+    // 跨 plan 不去重 (Plan A 和 Plan B 各自獨立)
     for (const [planKey, plan] of Object.entries(data.plans) as [string, any][]) {
-      // 先收集要保留的 (plan, day, visit_order, store_name, ...)
+      const seenStoreNames = new Set<string>();
       const entries: Array<{ day: number; storeName: string; city: string }> = [];
       for (const day of plan.days) {
         for (const [storeName, city] of day.stores as [string, string][]) {
-          if (seenStoreNames.has(storeName)) continue; // 跳過重複
+          if (seenStoreNames.has(storeName)) continue; // 跳過同 plan 重複
           seenStoreNames.add(storeName);
           entries.push({ day: day.day, storeName, city });
         }

@@ -271,9 +271,11 @@ export default function AdminCRM() {
     const urlCity = params.get('city') || '';
     const urlDistrict = params.get('district') || '';
     const urlStatus = params.get('status') || '';
+    const urlQ = params.get('q') || '';
     if (urlCity) setCityFilter(urlCity);
     if (urlDistrict) setDistrictFilter(urlDistrict);
     if (urlStatus) setStatusFilter(urlStatus);
+    if (urlQ) setSearch(urlQ);
   }, []);
 
   const selectRestaurant = async (r: Restaurant) => {
