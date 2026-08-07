@@ -114,6 +114,8 @@ function InlineEditableField({
 export default function AdminCRM() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selected, setSelected] = useState<Restaurant | null>(null);
+  // 行動版 RWD: 'list' = 顯示左側店家列表, 'detail' = 顯示右側詳情
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
   // filter states: 用 useEffect 在 mount 時讀 URL (比 useState lazy init 更可靠,
   // 因為 SSR 階段 window undefined 導致初始值一律空,client 端 lazy init 才能讀 URL,
   // 但 client 端 React hydration 過程可能沒接到那次的最新 state)
@@ -285,6 +287,7 @@ export default function AdminCRM() {
     setEditForm(r);
     setContactLogs(r.contact_logs || []);
     setEditing(false);
+    setMobileView('detail'); // <-- 行動版切到 detail view
     markViewed(r.id);  // <-- 點擊 = 已 review
     const res = await fetch(`/admin/api/restaurants/${r.id}`);
     const data = await res.json();
@@ -603,9 +606,12 @@ export default function AdminCRM() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex" style={{ height: '100vh', overflow: 'hidden' }}>
-      {/* LEFT PANEL - resizable width */}
-      <div style={{ width: leftPanelWidth }} className="border-r border-gray-200 flex flex-col bg-white shrink-0 relative">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row" style={{ height: '100vh', overflow: 'hidden' }}>
+      {/* LEFT PANEL - resizable width; 手機版: full width + 用 mobileView 切換顯示 */}
+      <div
+        className={`${mobileView === 'detail' ? 'hidden' : 'flex'} md:flex border-r border-gray-200 flex-col bg-white shrink-0 relative w-full md:w-auto`}
+        style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? leftPanelWidth : undefined }}
+      >
         <div className="p-3 border-b border-gray-200 space-y-2">
           <h1 className="text-sm font-bold text-gray-800 flex items-center justify-between">
             <span>🍜 CRM</span>
@@ -803,12 +809,20 @@ export default function AdminCRM() {
 
       {/* RIGHT PANEL */}
       {selected ? (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className={`${mobileView === 'list' ? 'hidden' : 'flex'} md:flex flex-1 flex-col overflow-hidden`}>
           {/* TOP SECTION: Info + Log (resizable) */}
           <div style={{ height: rightTopHeight }} className="flex flex-col shrink-0 border-b border-gray-300">
 
-            {/* Restaurant info + action buttons */}
+            {/* Mobile back button + restaurant info */}
             <div className="p-4 border-b border-gray-200 bg-white">
+              {/* 手機版返回按鈕 */}
+              <button
+                onClick={() => setMobileView('list')}
+                className="md:hidden mb-3 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+              >
+                ← 返回店家列表
+              </button>
+
               {/* 停用資訊列（只在已停用時顯示） */}
               {selected.disabled_at && (
                 <div className="mb-3 p-2 bg-gray-100 border border-gray-300 rounded text-xs text-gray-700 flex items-start gap-2">
@@ -980,9 +994,9 @@ export default function AdminCRM() {
 
             {/* Contact Log - form LEFT, records RIGHT */}
             <div className="flex-1 overflow-hidden bg-white">
-              <div className="h-full flex">
+              <div className="h-full flex flex-col md:flex-row">
                 {/* Log entry form - left, horizontal layout */}
-                <div className="w-[280px] shrink-0 p-3 border-r border-gray-200 flex flex-col gap-2">
+                <div className="w-full md:w-[280px] shrink-0 p-3 border-r border-gray-200 flex flex-col gap-2">
                   <div className="text-xs font-semibold text-gray-600 mb-1">📋 新增紀錄</div>
                   {/* Type + Note + Save all in ONE horizontal row */}
                   <div className="flex items-center gap-1.5">
