@@ -102,85 +102,68 @@ export async function POST(request: Request) {
 
     const updated = res.rows[0];
 
-    // 若 status = visited, 同步寫 contact_log 到 CRM
-    // 跳過/歇業/未拜訪 → 不寫 contact_log
+    // 確保 CRM 有對應店家 (visited 時自動 sync + AUTO_CREATE 時強制新增)
     let syncedContactLogId: number | null = null;
     let matchedRestaurant: { id: number; name: string } | null = null;
     let autoCreated = false;
 
-    if (cleanStatus === 'visited') {
-      // 從 hk_itinerary_stores.store_name + store_address 找 CRM restaurant_id
-      // 對應策略:
-      //   1. 先嘗試嚴格比對 (店名 + 城市 LIKE)
-      //   2. 失敗再用 fuzzy 4 字比對 + 同縣市
-      const exactMatch = await pool.query(
+    // 1. 找 CRM restaurant_id
+    const exactMatch = await pool.query(
+      `SELECT id, name, city FROM restaurants
+       WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+         AND disabled_at IS NULL
+       LIMIT 1`,
+      [updated.store_name]
+    );
+
+    let matchRes = exactMatch;
+
+    if (matchRes.rows.length === 0) {
+      // Fuzzy: 用店名前 4 字 + store_address 縣市模糊比對
+      const matchKey = updated.store_name.replace(/[港式飲茶餐廳店樓館坊軒]/g, '').slice(0, 4) || updated.store_name.slice(0, 4);
+      const addressPrefix = (updated.store_address || '').slice(0, 2);
+
+      matchRes = await pool.query(
         `SELECT id, name, city FROM restaurants
-         WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+         WHERE LOWER(TRIM(name)) LIKE LOWER($1)
            AND disabled_at IS NULL
+           AND ($2 = '' OR LOWER(city) LIKE LOWER($2) OR LOWER(city) LIKE LOWER($3))
+         ORDER BY id
          LIMIT 1`,
-        [updated.store_name]
+        [`%${matchKey}%`, `%${addressPrefix}%`, `%${addressPrefix.replace(/[縣市]/g, '')}%`]
       );
+    }
 
-      let matchRes = exactMatch;
+    // 2. 處理 AUTO_CREATE (找不到就新增)
+    if (matchRes.rows.length === 0 && AUTO_CREATE) {
+      const newCrmRes = await pool.query(
+        `INSERT INTO restaurants (name, city, has_hongkong_milk_tea, priority)
+         VALUES ($1, $2, $3, 1)
+         RETURNING id, name, city`,
+        [updated.store_name, updated.store_address || null, true]
+      );
+      const newR = newCrmRes.rows[0];
+      matchRes = { rows: [newR] } as any;
+      autoCreated = true;
+    }
 
-      if (matchRes.rows.length === 0) {
-        // Fuzzy: 用店名前 4 字 + store_address 縣市模糊比對
-        const matchKey = updated.store_name.replace(/[港式飲茶餐廳店樓館坊軒]/g, '').slice(0, 4) || updated.store_name.slice(0, 4);
-        const addressPrefix = (updated.store_address || '').slice(0, 2); // 「屏東」、「彰化」、「嘉義」等
+    // 3. 若 status=visited 且有對應店家 → 寫 contact_log
+    if (cleanStatus === 'visited' && matchRes.rows.length > 0) {
+      const r = matchRes.rows[0];
+      matchedRestaurant = { id: r.id, name: r.name };
 
-        matchRes = await pool.query(
-          `SELECT id, name, city FROM restaurants
-           WHERE LOWER(TRIM(name)) LIKE LOWER($1)
-             AND disabled_at IS NULL
-             AND ($2 = '' OR LOWER(city) LIKE LOWER($2) OR LOWER(city) LIKE LOWER($3))
-           ORDER BY id
-           LIMIT 1`,
-          [`%${matchKey}%`, `%${addressPrefix}%`, `%${addressPrefix.replace(/[縣市]/g, '')}%`]
-        );
-      }
+      const notesPrefix = autoCreated ? '(auto-created CRM) ' : '';
+      const notesText = updated.notes
+        ? `[hk-itinerary ${updated.plan} D${updated.day}] ${notesPrefix}${updated.notes}`
+        : `[hk-itinerary ${updated.plan} D${updated.day}] ${notesPrefix}已拜訪`;
 
-      if (matchRes.rows.length > 0) {
-        const r = matchRes.rows[0];
-        matchedRestaurant = { id: r.id, name: r.name };
-
-        // 寫 contact_log (使用 raw SQL 跳過 disabled 守門)
-        const contactLogRes = await pool.query(
-          `INSERT INTO contact_logs (restaurant_id, contact_type, notes, contact_date, status)
-           VALUES ($1, $2, $3, NOW(), $4)
-           RETURNING id`,
-          [
-            r.id,
-            'walkin',
-            updated.notes ? `[hk-itinerary ${updated.plan} D${updated.day}] ${updated.notes}` : `[hk-itinerary ${updated.plan} D${updated.day}] 已拜訪`,
-            'contacted',
-          ]
-        );
-        syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
-      } else if (AUTO_CREATE) {
-        // CRM 找不到 + 用戶允許自動新增 → 建立 CRM restaurant
-        const newCrmRes = await pool.query(
-          `INSERT INTO restaurants (name, city, has_hongkong_milk_tea, priority)
-           VALUES ($1, $2, $3, 1)
-           RETURNING id, name, city`,
-          [updated.store_name, updated.store_address || null, true]
-        );
-        const newR = newCrmRes.rows[0];
-        matchedRestaurant = { id: newR.id, name: newR.name };
-
-        const contactLogRes = await pool.query(
-          `INSERT INTO contact_logs (restaurant_id, contact_type, notes, contact_date, status)
-           VALUES ($1, $2, $3, NOW(), $4)
-           RETURNING id`,
-          [
-            newR.id,
-            'walkin',
-            updated.notes ? `[hk-itinerary ${updated.plan} D${updated.day}] (auto-created CRM) ${updated.notes}` : `[hk-itinerary ${updated.plan} D${updated.day}] (auto-created CRM) 已拜訪`,
-            'contacted',
-          ]
-        );
-        syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
-        autoCreated = true;
-      }
+      const contactLogRes = await pool.query(
+        `INSERT INTO contact_logs (restaurant_id, contact_type, notes, contact_date, status)
+         VALUES ($1, $2, $3, NOW(), $4)
+         RETURNING id`,
+        [r.id, 'walkin', notesText, 'contacted']
+      );
+      syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
     }
 
     return Response.json({

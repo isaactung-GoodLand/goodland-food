@@ -119,6 +119,36 @@ function HkItineraryPage() {
     }
   };
 
+  // 在 CRM 自動新增此店家 (only for not_in_crm)
+  const createCrmForStore = async (store: Store) => {
+    setSavingId(store.id);
+    try {
+      const r = await fetch('/admin/api/itinerary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: store.id,
+          status: 'pending',
+          auto_create_crm: true,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'CRM create failed');
+      await fetchData();
+      if (data.synced?.auto_created) {
+        const rid = data.synced.restaurant?.id;
+        if (rid) {
+          // 新增成功 → 直接跳到 CRM 該店家頁
+          window.open(`/admin?q=${encodeURIComponent(store.store_name)}`, '_blank');
+        }
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const handleSeed = async () => {
     setSeeding(true);
     setError(null);
@@ -271,9 +301,14 @@ function HkItineraryPage() {
                           </span>
                         )}
                         {audit[s.id]?.not_in_crm && (
-                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded">
-                            CRM 無此店
-                          </span>
+                          <button
+                            onClick={() => createCrmForStore(s)}
+                            className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                            disabled={savingId === s.id}
+                            title={`在 CRM 新增「${s.store_name}」@${s.store_address}`}
+                          >
+                            + 新增到 CRM
+                          </button>
                         )}
                         {s.crm_url && (
                           <a
