@@ -624,14 +624,9 @@ export default function AdminCRM() {
             </div>
           </h1>
           <div className="relative">
-            <button onClick={() => { const inp = document.getElementById('search-input') as HTMLInputElement; inp?.classList.toggle('hidden'); inp?.focus(); }}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 border border-gray-300 rounded text-xs text-gray-500 hover:bg-gray-50">
-              🔍 <span className="text-gray-400 text-[10px]">搜尋</span>
-            </button>
-            <input id="search-input" type="text" placeholder="店名/地址..."
+            <input id="search-input" type="text" placeholder="🔍 店名/地址 (URL ?q= 自動填入)"
               value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
-              onBlur={e => { if (!e.target.value) e.target.classList.add('hidden'); }}
-              className="hidden absolute top-full left-0 right-0 mt-1 px-2 py-1.5 border border-gray-300 rounded text-xs bg-white z-10 outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <select value={cityFilter} onChange={e => { setCityFilter(e.target.value); setPage(1); }}
