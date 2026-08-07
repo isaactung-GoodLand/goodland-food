@@ -233,6 +233,13 @@ function HkItineraryPage() {
           >
             Plan B — 7 天
           </button>
+          <a
+            href="/admin/duplicates"
+            className="ml-auto px-4 py-2 rounded-lg font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300"
+            title="找出 CRM 中重複的店家並合併"
+          >
+            🔗 CRM 重複偵測
+          </a>
         </div>
 
         {/* Seed 按鈕 (只在空資料時) */}
