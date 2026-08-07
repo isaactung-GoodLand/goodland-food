@@ -65,10 +65,11 @@ export async function GET(request: Request) {
   }
 }
 
-// 更新單筆店家狀態/備註
+// 確保 CRM 沒有此店家時自動新增
 export async function POST(request: Request) {
   const body = await request.json();
-  const { id, status, notes } = body;
+  const { id, status, notes, auto_create_crm } = body;
+  const AUTO_CREATE = auto_create_crm === true;
 
   if (!id) {
     return Response.json({ error: 'Missing id' }, { status: 400 });
@@ -105,6 +106,7 @@ export async function POST(request: Request) {
     // 跳過/歇業/未拜訪 → 不寫 contact_log
     let syncedContactLogId: number | null = null;
     let matchedRestaurant: { id: number; name: string } | null = null;
+    let autoCreated = false;
 
     if (cleanStatus === 'visited') {
       // 從 hk_itinerary_stores.store_name + store_address 找 CRM restaurant_id
@@ -154,6 +156,30 @@ export async function POST(request: Request) {
           ]
         );
         syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
+      } else if (AUTO_CREATE) {
+        // CRM 找不到 + 用戶允許自動新增 → 建立 CRM restaurant
+        const newCrmRes = await pool.query(
+          `INSERT INTO restaurants (name, city, has_hongkong_milk_tea, priority)
+           VALUES ($1, $2, $3, 1)
+           RETURNING id, name, city`,
+          [updated.store_name, updated.store_address || null, true]
+        );
+        const newR = newCrmRes.rows[0];
+        matchedRestaurant = { id: newR.id, name: newR.name };
+
+        const contactLogRes = await pool.query(
+          `INSERT INTO contact_logs (restaurant_id, contact_type, notes, contact_date, status)
+           VALUES ($1, $2, $3, NOW(), $4)
+           RETURNING id`,
+          [
+            newR.id,
+            'walkin',
+            updated.notes ? `[hk-itinerary ${updated.plan} D${updated.day}] (auto-created CRM) ${updated.notes}` : `[hk-itinerary ${updated.plan} D${updated.day}] (auto-created CRM) 已拜訪`,
+            'contacted',
+          ]
+        );
+        syncedContactLogId = contactLogRes.rows[0]?.id ?? null;
+        autoCreated = true;
       }
     }
 
@@ -162,6 +188,7 @@ export async function POST(request: Request) {
       synced: {
         contact_log_id: syncedContactLogId,
         restaurant: matchedRestaurant,
+        auto_created: autoCreated,
       },
     });
   } catch (e: any) {

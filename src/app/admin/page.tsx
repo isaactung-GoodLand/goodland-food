@@ -275,7 +275,11 @@ export default function AdminCRM() {
     if (urlCity) setCityFilter(urlCity);
     if (urlDistrict) setDistrictFilter(urlDistrict);
     if (urlStatus) setStatusFilter(urlStatus);
-    if (urlQ) setSearch(urlQ);
+    if (urlQ) {
+      setSearch(urlQ);
+      // 立即觸發 fetch (因為 fetchRestaurants effect 只在 mount 跑)
+      setTimeout(() => fetchRestaurants(), 0);
+    }
   }, []);
 
   const selectRestaurant = async (r: Restaurant) => {
