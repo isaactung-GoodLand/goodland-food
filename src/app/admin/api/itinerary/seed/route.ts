@@ -26,7 +26,7 @@ export async function POST() {
         for (const [storeName, city] of day.stores as [string, string][]) {
           visitOrder++;
           const googleMapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(storeName)}`;
-          const crmUrl = `/admin/restaurants?q=${encodeURIComponent(storeName)}`;
+          const crmUrl = `/admin?q=${encodeURIComponent(storeName)}`;
 
           const res = await pool.query(
             `INSERT INTO hk_itinerary_stores
