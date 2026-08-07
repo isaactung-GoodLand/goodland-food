@@ -220,6 +220,8 @@ export default function AdminCRM() {
     setLoading(false);
   }, [search, cityFilter, districtFilter, uncontactedOnly, hasMilkTeaOnly, statusFilter, newOnly, filters, page, includeDisabled, onlyDisabled, sort]);
 
+  // search 設進 state 後, fetchRestaurants (useCallback deps) 會 re-create,
+  // 這個 effect 因為 deps 包含 fetchRestaurants 也會自動重跑
   useEffect(() => { fetchRestaurants(); }, [fetchRestaurants]);
 
   // 從 tracking 頁跳過來時，URL 帶 ?restaurant_id=N，自動選中該店家
@@ -275,11 +277,7 @@ export default function AdminCRM() {
     if (urlCity) setCityFilter(urlCity);
     if (urlDistrict) setDistrictFilter(urlDistrict);
     if (urlStatus) setStatusFilter(urlStatus);
-    if (urlQ) {
-      setSearch(urlQ);
-      // 立即觸發 fetch (因為 fetchRestaurants effect 只在 mount 跑)
-      setTimeout(() => fetchRestaurants(), 0);
-    }
+    if (urlQ) setSearch(urlQ);
   }, []);
 
   const selectRestaurant = async (r: Restaurant) => {

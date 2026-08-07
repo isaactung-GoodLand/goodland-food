@@ -138,7 +138,6 @@ function HkItineraryPage() {
       if (data.synced?.auto_created) {
         const rid = data.synced.restaurant?.id;
         if (rid) {
-          // 新增成功 → 直接跳到 CRM 該店家頁
           window.open(`/admin?q=${encodeURIComponent(store.store_name)}`, '_blank');
         }
       }
@@ -146,6 +145,25 @@ function HkItineraryPage() {
       setError(e.message);
     } finally {
       setSavingId(null);
+    }
+  };
+
+  // 標記某 CRM 店家為已驗證
+  const verifyCrmRestaurant = async (restaurantId: number) => {
+    if (!confirm(`把 CRM #${restaurantId} 標為「已驗證」?\n(表示這個 CRM 記錄是正確的,即使行程標的城市不對也以 CRM 為準)`)) return;
+    try {
+      const r = await fetch(`/admin/api/restaurants/${restaurantId}/verify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'verified' }),
+      });
+      if (!r.ok) {
+        const data = await r.json();
+        throw new Error(data.error || 'Verify failed');
+      }
+      await fetchData();
+    } catch (e: any) {
+      setError(e.message);
     }
   };
 
@@ -299,6 +317,16 @@ function HkItineraryPage() {
                           <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">
                             行程:{s.store_address} | CRM:{audit[s.id]?.crm_city}
                           </span>
+                        )}
+                        {audit[s.id]?.city_mismatch && audit[s.id]?.restaurant_id && (
+                          <button
+                            onClick={() => verifyCrmRestaurant(audit[s.id]!.restaurant_id!)}
+                            className="text-xs px-2 py-0.5 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50"
+                            disabled={savingId === s.id}
+                            title={`把 CRM #${audit[s.id]?.restaurant_id} 標為已驗證 (確認行程記的城市有誤,CRM 是對的)`}
+                          >
+                            ✓ 標 CRM 已驗證
+                          </button>
                         )}
                         {audit[s.id]?.not_in_crm && (
                           <button
