@@ -318,6 +318,11 @@ function HkItineraryPage() {
                             }
                           >
                             {s.store_name}
+                            {s.store_address && (
+                              <span className="ml-2 text-xs px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-normal">
+                                {s.store_address}
+                              </span>
+                            )}
                           </a>
                         )}
                         {audit[s.id]?.city_mismatch && (
