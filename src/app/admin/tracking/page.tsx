@@ -3,6 +3,119 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
+// ====== Inline 編輯「最新聯絡備註」======
+// 自動儲存: blur 或 1.2 秒 debounce
+// 顯示狀態: idle | saving | saved | error
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+function InlineNoteEditor({
+  logId,
+  initialValue,
+  onSaved,
+}: {
+  logId: number;
+  initialValue: string;
+  onSaved: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const [saved, setSaved] = useState(initialValue);
+  const [state, setState] = useState<SaveState>('idle');
+  const [errMsg, setErrMsg] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(initialValue);
+
+  // 換店家時 reset
+  useEffect(() => {
+    setValue(initialValue);
+    setSaved(initialValue);
+    lastSavedRef.current = initialValue;
+    setState('idle');
+    setErrMsg('');
+  }, [logId]);
+
+  const save = useCallback(async (text: string) => {
+    if (text === lastSavedRef.current) return;
+    setState('saving');
+    setErrMsg('');
+    try {
+      const r = await fetch(`/admin/api/contact-logs/${logId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: text }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.error || `HTTP ${r.status}`);
+      }
+      lastSavedRef.current = text;
+      setSaved(text);
+      setState('saved');
+      onSaved();
+      // 1.5s 後收回 saved 標籤
+      setTimeout(() => {
+        setState(s => (s === 'saved' ? 'idle' : s));
+      }, 1500);
+    } catch (e: any) {
+      setErrMsg(e?.message || '儲存失敗');
+      setState('error');
+    }
+  }, [logId, onSaved]);
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const next = e.target.value;
+    setValue(next);
+    // debounce 自動儲存
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => save(next), 1200);
+  };
+
+  const onBlur = () => {
+    // blur 時若有 pending 立即存
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (value !== lastSavedRef.current) save(value);
+  };
+
+  // Clean up on unmount
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
+
+  const dirty = value !== saved && value !== lastSavedRef.current;
+  const statusText =
+    state === 'saving' ? '💾 儲存中…'
+    : state === 'saved' ? '✅ 已儲存'
+    : state === 'error' ? `❌ ${errMsg || '失敗'}`
+    : dirty ? '有未儲存修改（離開此框自動存）'
+    : '';
+  const statusColor =
+    state === 'error' ? 'text-red-600'
+    : state === 'saved' ? 'text-green-600'
+    : state === 'saving' ? 'text-blue-600'
+    : 'text-gray-400';
+
+  return (
+    <div className="mt-1">
+      <textarea
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        rows={4}
+        className={`w-full text-sm text-gray-800 bg-white border rounded-lg p-2 resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors ${
+          state === 'error' ? 'border-red-300' : 'border-blue-200'
+        }`}
+        placeholder="輸入備註（會自動儲存）…"
+        maxLength={2000}
+      />
+      <div className={`mt-1 text-[10px] ${statusColor}`}>
+        {statusText}
+      </div>
+    </div>
+  );
+}
+
 interface TrackingRow {
   restaurant_id: number;
   restaurant_name: string;
@@ -274,9 +387,13 @@ export default function TrackingPage() {
                   <div className="text-xs text-gray-700 mb-1">
                     {TYPE_LABEL[selected.latest_contact_type] || selected.latest_contact_type}
                   </div>
-                  <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                    {selected.latest_notes || '(無備註)'}
-                  </div>
+                  <div className="text-[10px] text-gray-500 mb-1 font-medium">備註（點下方輸入框直接編輯）</div>
+                  <InlineNoteEditor
+                    key={selected.latest_log_id}
+                    logId={selected.latest_log_id}
+                    initialValue={selected.latest_notes ?? ''}
+                    onSaved={() => { /* 不需要重 fetch，state 已同步 */ }}
+                  />
                 </div>
               </div>
 
