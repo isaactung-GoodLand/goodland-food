@@ -112,6 +112,7 @@ export async function GET(request: Request) {
   const result = await pool.query(`
     SELECT id, name, city, district, address, phone,
            facebook, instagram, line, gmaps_url,
+           place_id, maps_cid,
            has_hongkong_milk_tea, rating,
            priority,
            created_at,

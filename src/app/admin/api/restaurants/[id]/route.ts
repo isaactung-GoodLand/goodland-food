@@ -45,6 +45,37 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   const { touch: touchPriority, value: priorityValue } = normalizePriority(priority);
 
+  // place_id: Google Maps 唯一比對鍵。
+  //   - undefined: 沒帶 → 保留原值
+  //   - null:      清除(有時需要手動解除錯誤綁定)
+  //   - 字串:      寫入(給回填/匯入流程用)
+  //   正規化: 去掉空白、統一大小寫開頭的 ChIJ 前綴不強制,只做 trim + 格式檢查
+  function normalizePlaceId(raw: unknown): { touch: boolean; value: string | null } {
+    if (raw === undefined) return { touch: false, value: null };
+    if (raw === null) return { touch: true, value: null };
+    const s = String(raw).trim();
+    if (s === '') return { touch: true, value: null };
+    // place_id 格式: ChIJ + 26 個 base64url 字元。容許少數異常但擋掉明顯垃圾值。
+    if (!/^ChIJ[A-Za-z0-9_\-]{10,}$/.test(s)) {
+      return { touch: false, value: null }; // 無效格式 → 保留原值,不偷偷改
+    }
+    return { touch: true, value: s };
+  }
+  const { touch: touchPlaceId, value: placeIdValue } = normalizePlaceId(body.place_id);
+
+  // maps_cid: Google Maps hex CID (0x + 16 hex)。place_id 缺失時的比對備援。
+  function normalizeMapsCid(raw: unknown): { touch: boolean; value: string | null } {
+    if (raw === undefined) return { touch: false, value: null };
+    if (raw === null) return { touch: true, value: null };
+    const s = String(raw).trim().toLowerCase();
+    if (s === '') return { touch: true, value: null };
+    if (!/^0x[0-9a-f]{16}$/.test(s)) {
+      return { touch: false, value: null }; // 無效格式 → 保留原值
+    }
+    return { touch: true, value: s };
+  }
+  const { touch: touchMapsCid, value: mapsCidValue } = normalizeMapsCid(body.maps_cid);
+
   const res = await pool.query(
     `UPDATE restaurants SET
        name = CASE WHEN $9::boolean THEN $1 ELSE name END,
@@ -54,10 +85,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
        line = COALESCE($5, line),
        address = COALESCE($6, address),
        priority = CASE WHEN $8::boolean THEN $7::smallint ELSE priority END,
+       place_id = CASE WHEN $11::boolean THEN $12::text ELSE place_id END,
+       maps_cid = CASE WHEN $13::boolean THEN $14::text ELSE maps_cid END,
        updated_at = NOW()
      WHERE id = $10 ${guardClause}
      RETURNING *`,
-    [nameValue, phone, facebook, instagram, line, address, priorityValue, touchPriority, touchName, id]
+    [nameValue, phone, facebook, instagram, line, address, priorityValue, touchPriority, touchName, id,
+     touchPlaceId, placeIdValue, touchMapsCid, mapsCidValue]
   );
   if (res.rows.length === 0) {
     // 區分 404 vs 409（已停用）
