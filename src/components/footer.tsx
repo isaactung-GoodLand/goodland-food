@@ -44,6 +44,7 @@ export function Footer() {
               <li><Link href="/about" className="hover:text-forest-300 transition-colors">關於甘田</Link></li>
               <li><Link href="/press" className="hover:text-forest-300 transition-colors">媒體報導</Link></li>
               <li><Link href="/contact" className="hover:text-forest-300 transition-colors">聯絡合作</Link></li>
+              <li><Link href="/privacy" className="hover:text-forest-300 transition-colors">隱私權政策</Link></li>
             </ul>
           </div>
 
