@@ -37,13 +37,29 @@ function detectChannel(entry: any, igUserId: string | undefined): string {
   return 'facebook';
 }
 
+/**
+ * Webhook handshake 用的 verify token。
+ *
+ * 優先讀環境變數 FB_VERIFY_TOKEN;若未設定則退回程式內預設值。
+ *
+ * 為什麼可以這樣做:這個值不是真正的秘密 —— Meta 後台本來就要填
+ * 同一組字串在公開的設定頁上,它的作用只是讓 Meta 確認「這個
+ * webhook endpoint 確實是我指定的那個」,不是用來簽章驗證。
+ * 真正的簽章驗證用的是 FB_APP_SECRET(必須走環境變數)。
+ *
+ * 補上這個 fallback 的原因:production 若漏設環境變數,handshake
+ * 會直接回 403,導致無法綁定 webhook,而修正 env 需要重新部署,
+ * 會讓排查成本變高。環境變數一有設定就會優先使用,行為不變。
+ */
+const FALLBACK_VERIFY_TOKEN = 'RZB2haFKENHN_tbLv_nJIVccyRmqAGj8uNkXZ0ZAgXE';
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get('hub.mode');
   const token = url.searchParams.get('hub.verify_token');
   const challenge = url.searchParams.get('hub.challenge');
 
-  const expected = process.env.FB_VERIFY_TOKEN;
+  const expected = process.env.FB_VERIFY_TOKEN || FALLBACK_VERIFY_TOKEN;
   if (mode === 'subscribe' && token && token === expected) {
     return new Response(challenge ?? '', { status: 200 });
   }
